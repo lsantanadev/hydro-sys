@@ -45,7 +45,7 @@ td small {
   text-align: center;
 }
 .map-fallback .panel { max-width: 460px; }
-.leaflet-tile { filter: brightness(.55) saturate(.55) hue-rotate(160deg); }
+.leaflet-tile { filter: none; }
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
   background: var(--bg2) !important;
