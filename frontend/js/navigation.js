@@ -1,0 +1,58 @@
+import { uiState } from './state.js';
+import { renderDashboard } from './dashboard.js';
+import { renderAlerts } from './alertas.js';
+import { renderSensors } from './sensores.js';
+import { renderShelters } from './abrigos.js';
+import { renderEmergencyRequests } from './emergencia.js';
+import { renderMoradores } from './auth.js';
+import { renderAudit } from './auditoria.js';
+import { initMap, renderMap } from './map.js';
+import { toast } from './ui.js';
+
+const tabs = ['dashboard', 'alertas', 'emergencias', 'sensores', 'abrigos', 'moradores', 'auditoria'];
+
+export function goTo(page) {
+  if (page === 'admin') {
+    toast('O painel do operador aguardara autenticacao pela API.');
+    page = 'login';
+  }
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById(`pg-${page}`)?.classList.add('active');
+  uiState.page = page;
+  document.getElementById('topnav')?.classList.remove('active');
+  if (page === 'map') {
+    initMap();
+    setTimeout(renderMap, 80);
+  }
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+export function showTab(tab) {
+  uiState.adminTab = tabs.includes(tab) ? tab : 'dashboard';
+  tabs.forEach(item => {
+    document.getElementById(`tab-${item}`)?.classList.toggle('active', item === uiState.adminTab);
+    document.getElementById(`ni-${item}`)?.classList.toggle('active', item === uiState.adminTab);
+  });
+  const titles = {
+    dashboard: 'Dashboard',
+    alertas: 'Alertas',
+    emergencias: 'Pedidos de ajuda',
+    sensores: 'Sensores ESP32',
+    abrigos: 'Abrigos e apoio',
+    moradores: 'Moradores',
+    auditoria: 'Auditoria',
+  };
+  const title = document.getElementById('admtitle');
+  if (title) title.textContent = titles[uiState.adminTab];
+  if (uiState.adminTab === 'dashboard') renderDashboard();
+  if (uiState.adminTab === 'alertas') renderAlerts();
+  if (uiState.adminTab === 'emergencias') renderEmergencyRequests();
+  if (uiState.adminTab === 'sensores') renderSensors();
+  if (uiState.adminTab === 'abrigos') renderShelters();
+  if (uiState.adminTab === 'moradores') renderMoradores();
+  if (uiState.adminTab === 'auditoria') renderAudit();
+}
+
+export function toggleMenu() {
+  document.getElementById('topnav')?.classList.toggle('active');
+}
