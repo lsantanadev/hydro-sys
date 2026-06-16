@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { api } from './api.js';
-import { state, syncOperationalState } from './state.js';
+import { loadResidents } from './state.js';
 import { goTo } from './navigation.js';
 import { openModal, toast } from './ui.js';
 
@@ -26,8 +26,7 @@ export function doLogin() {
 }
 
 export function fazerLogout() {
-  state.loggedUser = null;
-  toast('Sessao encerrada.');
+  toast('Sessao local inexistente. A autenticacao aguardara a API.');
   goTo('landing');
 }
 
@@ -52,9 +51,11 @@ export async function subForm() {
       street: addresses[0].rua,
       consent: true,
     });
-    await syncOperationalState();
     document.getElementById('cad-form-box').hidden = true;
     document.getElementById('cad-succ-box').hidden = false;
+    const successText = document.querySelector('#cad-succ-box p');
+    if (successText) successText.textContent = 'Cadastro enviado para a API. O login sera liberado quando a autenticacao estiver implementada.';
+    await renderMoradores();
     toast(addresses.length > 1
       ? 'Cadastro principal concluido. Enderecos adicionais nao foram persistidos.'
       : 'Cadastro concluido. O login aguarda autenticacao pela API.');
@@ -63,17 +64,22 @@ export async function subForm() {
   }
 }
 
-export function renderMoradores() {
+export async function renderMoradores() {
   const body = document.getElementById('mor-tbody');
   if (!body) return;
-  body.innerHTML = state.moradores.map(morador => `
-    <tr>
-      <td>${escapeHtml(morador.nome)}</td>
-      <td>${escapeHtml(morador.telefone)}</td>
-      <td>${escapeHtml(morador.bairro)}</td>
-      <td><span class="badge good">Ativo</span></td>
-    </tr>
-  `).join('') || '<tr><td colspan="4">Nenhum morador cadastrado.</td></tr>';
+  try {
+    const moradores = await loadResidents();
+    body.innerHTML = moradores.map(morador => `
+      <tr>
+        <td>${escapeHtml(morador.nome)}</td>
+        <td>${escapeHtml(morador.telefone)}</td>
+        <td>${escapeHtml(morador.bairro)}</td>
+        <td><span class="badge good">Ativo</span></td>
+      </tr>
+    `).join('') || '<tr><td colspan="4">Nenhum morador cadastrado.</td></tr>';
+  } catch (error) {
+    body.innerHTML = `<tr><td colspan="4">${escapeHtml(error.message)}</td></tr>`;
+  }
 }
 
 export function addCadastroEndereco() {
@@ -94,7 +100,7 @@ export function addCadastroEndereco() {
         <label class="field"><span>CEP</span><input data-field="cep" placeholder="88130-000"></label>
         <label class="field span-2"><span>Referencia</span><input data-field="referencia" placeholder="Proximo a escola"></label>
       </div>
-      <small>Endereco temporario: sera mantido apenas durante esta sessao.</small>
+      <small>Endereco temporario: sera mantido apenas ate o envio do cadastro.</small>
     </section>
   `);
 }
@@ -104,32 +110,11 @@ export function removeCadastroEndereco(id) {
 }
 
 export function openResidentSettings() {
-  if (state.loggedUser?.perfil !== 'MORADOR') return toast('Entre como morador para acessar as configuracoes.');
-  const addresses = state.loggedUser.enderecos || [];
   openModal(`
     <h3>Configuracoes da conta</h3>
-    <p>Enderecos cadastrados para recebimento de alertas.</p>
-    <div class="saved-addresses">
-      ${addresses.map((address, index) => `
-        <article class="saved-address">
-          <span class="badge ${index === 0 ? 'good' : 'warning'}">${index === 0 ? 'Principal' : 'Adicional'}</span>
-          <strong>${escapeHtml(address.rua)}, ${escapeHtml(address.numero)}</strong>
-          <small>${escapeHtml(address.bairro)} - CEP ${escapeHtml(address.cep)}${address.referencia ? ` - ${escapeHtml(address.referencia)}` : ''}</small>
-        </article>
-      `).join('') || '<p>Nenhum endereco cadastrado.</p>'}
-    </div>
-    <h4 class="settings-title">Cadastrar novo endereco</h4>
-    <p class="danger-note">O cadastro de novos enderecos ainda nao possui persistencia e permanece bloqueado.</p>
-    <div class="form-grid modal-grid">
-      <label class="field"><span>Bairro</span><select disabled>${bairroOptions()}</select></label>
-      <label class="field"><span>Rua</span><input disabled placeholder="Aguardando integracao"></label>
-      <label class="field"><span>Numero</span><input disabled placeholder="Aguardando integracao"></label>
-      <label class="field"><span>CEP</span><input disabled placeholder="Aguardando integracao"></label>
-      <label class="field span-2"><span>Referencia</span><input disabled placeholder="Aguardando integracao"></label>
-    </div>
+    <p class="danger-note">As configuracoes do morador aguardam autenticacao pela API. Nenhum endereco sera salvo localmente.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" type="button" onclick="closeModal()">Fechar</button>
-      <button class="btn btn-primary" type="button" disabled>Cadastro indisponivel</button>
     </div>
   `);
 }
