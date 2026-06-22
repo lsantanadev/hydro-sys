@@ -208,6 +208,8 @@ def update_sensor(sensor_id: int, payload: SensorUpdate, db: Session = Depends(g
 @router.delete("/sensors/{sensor_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deactivate_sensor(sensor_id: int, db: Session = Depends(get_db)):
     sensor = sensor_or_404(db, sensor_id)
+    if not sensor.active:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     sensor.active = False
     audit(db, "operador", "SENSOR_DESATIVADO", sensor.sensor_code)
     db.commit()
