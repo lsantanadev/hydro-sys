@@ -97,7 +97,7 @@ export async function openEditSensorModal(id) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" type="button" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-danger" type="button" onclick="deleteSensor(${sensor.apiId})">Desativar</button>
+      <button id="sensor-delete" class="btn btn-danger" type="button" onclick="deleteSensor(${sensor.apiId}, '${escapeAttribute(sensor.id)}')">Desativar</button>
       <button class="btn btn-primary" type="button" onclick="saveSensorEdit(${sensor.apiId})">Salvar alteracoes</button>
     </div>
   `);
@@ -116,7 +116,13 @@ export async function saveSensorEdit(id) {
   }
 }
 
-export async function deleteSensor(id) {
+export async function deleteSensor(id, sensorCode = '') {
+  const label = sensorCode || 'este sensor';
+  if (!window.confirm(`Desativar ${label}? O sensor deixara de aparecer no mapa publico.`)) {
+    return;
+  }
+  const button = document.getElementById('sensor-delete');
+  if (button) button.disabled = true;
   try {
     await api.deleteSensor(id);
     closeModal();
@@ -124,6 +130,7 @@ export async function deleteSensor(id) {
     toast('Sensor desativado.');
   } catch (error) {
     toast(error.message);
+    if (button) button.disabled = false;
   }
 }
 
@@ -202,4 +209,8 @@ function escapeHtml(text) {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
+}
+
+function escapeAttribute(text) {
+  return escapeHtml(text).replaceAll("'", '&#39;');
 }
