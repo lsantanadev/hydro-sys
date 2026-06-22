@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
@@ -142,6 +143,10 @@ def latest_valid_reading(db: Session, sensor_id: int) -> SensorReading | None:
     )
 
 
+def audit_payload(payload: dict) -> str:
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
 @router.get("/health")
 def health(db: Session = Depends(get_db)):
     db.execute(text("select 1"))
@@ -191,6 +196,11 @@ def update_sensor(sensor_id: int, payload: SensorUpdate, db: Session = Depends(g
     data = payload.model_dump(exclude_unset=True)
     if not data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Informe ao menos um campo para atualizar.")
+    previous_thresholds = {
+        "threshold_yellow": float(sensor.threshold_yellow),
+        "threshold_orange": float(sensor.threshold_orange),
+        "threshold_red": float(sensor.threshold_red),
+    }
     yellow = data.get("threshold_yellow", float(sensor.threshold_yellow))
     orange = data.get("threshold_orange", float(sensor.threshold_orange))
     red = data.get("threshold_red", float(sensor.threshold_red))
@@ -199,7 +209,25 @@ def update_sensor(sensor_id: int, payload: SensorUpdate, db: Session = Depends(g
     for field, value in data.items():
         setattr(sensor, field, value)
     sensor.current_status = status_by_level(sensor, float(sensor.current_level))
-    audit(db, "operador", "SENSOR_ATUALIZADO", sensor.sensor_code, str(data))
+    audit(db, "operador", "SENSOR_ATUALIZADO", sensor.sensor_code, audit_payload(data))
+    threshold_fields = {"threshold_yellow", "threshold_orange", "threshold_red"}
+    if threshold_fields.intersection(data):
+        audit(
+            db,
+            "operador",
+            "LIMIARES_ALTERADOS",
+            sensor.sensor_code,
+            audit_payload(
+                {
+                    "antes": previous_thresholds,
+                    "depois": {
+                        "threshold_yellow": float(sensor.threshold_yellow),
+                        "threshold_orange": float(sensor.threshold_orange),
+                        "threshold_red": float(sensor.threshold_red),
+                    },
+                }
+            ),
+        )
     db.commit()
     db.refresh(sensor)
     return serialize_sensor(sensor)
