@@ -41,15 +41,22 @@ class SensorCreate(SensorBase):
 
 
 class SensorUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     name: str | None = Field(default=None, min_length=1, max_length=120)
     neighborhood: str | None = Field(default=None, max_length=120)
     location_description: str | None = Field(default=None, max_length=255)
-    latitude: float | None = None
-    longitude: float | None = None
-    threshold_yellow: float | None = None
-    threshold_orange: float | None = None
-    threshold_red: float | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    threshold_yellow: float | None = Field(default=None, ge=0)
+    threshold_orange: float | None = Field(default=None, ge=0)
+    threshold_red: float | None = Field(default=None, ge=0)
     active: bool | None = None
+
+    @field_validator("neighborhood", "location_description")
+    @classmethod
+    def empty_optional_text_to_none(cls, value: str | None):
+        return value or None
 
 
 class SensorOut(BaseModel):
