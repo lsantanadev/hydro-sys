@@ -59,7 +59,7 @@ export async function renderMap() {
   if (!lmap) {
     const el = document.getElementById('lmap');
     if (el) {
-      el.innerHTML = '<div class="map-fallback"><section class="panel"><h3>Mapa indisponivel</h3><p>O Leaflet sera exibido quando a biblioteca estiver carregada.</p></section></div>';
+      el.innerHTML = '<div class="map-fallback"><section class="panel"><h3>Mapa indisponível</h3><p>O Leaflet será exibido quando a biblioteca estiver carregada.</p></section></div>';
     }
     return;
   }
@@ -75,7 +75,7 @@ export async function renderMap() {
     markers.push(L.marker([sensor.lat, sensor.lng], { icon: markerIcon }).addTo(lmap).bindPopup(`
       <strong>${escapeHtml(sensor.nome)}</strong><br>
       ${escapeHtml(sensor.endereco)}<br>
-      Nivel: ${sensor.level} cm<br>
+      Nível: ${sensor.level} cm<br>
       Status: ${sensor.st}
     `));
   });

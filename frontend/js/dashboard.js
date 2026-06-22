@@ -39,7 +39,7 @@ export async function renderDashboard() {
   }
   const emergencyList = document.getElementById('emergency-summary');
   if (emergencyList) {
-    emergencyList.innerHTML = '<p>Pedidos emergenciais aguardam integracao para serem registrados.</p>';
+    emergencyList.innerHTML = '<p>Pedidos emergenciais aguardam integração para serem registrados.</p>';
   }
 }
 
@@ -72,9 +72,9 @@ function renderPrototypeController(sensors, error = '') {
       <div class="prototype-value"><strong>${sensor.level}</strong><span>cm</span><small>Ultima leitura: ${sensor.reading}</small></div>
       <div class="meter"><span style="width:${pct}%"></span></div>
       <div class="prototype-thresholds">
-        <span>Atencao ${sensor.ly} cm</span>
+        <span>Atenção ${sensor.ly} cm</span>
         <span>Risco ${sensor.ll} cm</span>
-        <span>Emergencia ${sensor.lr} cm</span>
+        <span>Emergência ${sensor.lr} cm</span>
       </div>
       <div class="prototype-entry">
         <label class="field"><span>Leitura simulada (cm)</span><input id="prototype-level-input" type="number" min="0" max="${sensor.max}" step="0.1" value="${sensor.level}"></label>
@@ -142,7 +142,7 @@ async function sendPrototypeReading(levelValue, source) {
     toast(`${sensor.id}: leitura enviada para a API.`);
   } catch (error) {
     setApiConnection('desconectada');
-    toast(`API indisponivel: ${error.message}`);
+    toast(`API indisponível: ${error.message}`);
   }
 }
 

@@ -5,7 +5,7 @@ const localApiUrl = ['localhost', '127.0.0.1'].includes(hostname)
   : '';
 
 export const CONFIG = {
-  city: 'Palhoca',
+  city: 'Palhoça',
   state: 'SC',
   center: [-27.645, -48.670],
   zoom: 13,

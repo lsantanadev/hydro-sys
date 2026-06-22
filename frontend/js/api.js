@@ -12,7 +12,7 @@ async function request(path, options = {}) {
   const response = await fetch(`${apiBaseUrl()}${path}`, options);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.detail || 'Falha de comunicacao com a API.');
+    throw new Error(payload.detail || 'Falha de comunicação com a API.');
   }
   return payload;
 }

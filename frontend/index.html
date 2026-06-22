@@ -23,11 +23,11 @@
   <section id="pg-landing" class="page active">
     <div id="rain-effect" class="rain-effect" aria-hidden="true"></div>
     <header class="topbar">
-      <button class="brand" type="button" onclick="goTo('landing')" aria-label="HydroSys - Ir para inicio">
+      <button class="brand" type="button" onclick="goTo('landing')" aria-label="HydroSys - Ir para início">
         <img class="brand-wordmark" src="assets/hydrosys-logo.png" alt="HydroSys" />
       </button>
       <button class="menu-toggle" type="button" onclick="toggleMenu()" aria-label="Abrir menu"><span data-icon="menu"></span></button>
-      <nav class="topnav" id="topnav" aria-label="Navegacao principal">
+      <nav class="topnav" id="topnav" aria-label="Navegação principal">
         <button class="btn btn-ghost" type="button" onclick="goTo('map')"><span data-icon="map"></span>Mapa</button>
         <button class="btn btn-ghost" type="button" onclick="goTo('cadastro')"><span data-icon="users"></span>Cadastro</button>
         <button class="btn btn-primary" type="button" onclick="goTo('login')"><span data-icon="login"></span>Entrar</button>
@@ -37,8 +37,8 @@
     <main class="hero">
       <div class="hero-copy">
         <span class="system-badge"><span class="live-dot"></span> Monitoramento ativo</span>
-        <h1>Proteja sua familia dos <span class="gradient-text">alagamentos</span></h1>
-        <p>Monitoramento inteligente para Palhoca com sensores ESP32, mapa operacional, alertas, abrigos e apoio rápido em situacões de risco.</p>
+        <h1>Proteja sua família dos <span class="gradient-text">alagamentos</span></h1>
+        <p>Monitoramento inteligente para Palhoça com sensores ESP32, mapa operacional, alertas, abrigos e apoio rápido em situações de risco.</p>
         <div class="hero-actions">
           <button class="btn btn-primary" type="button" onclick="goTo('map')"><span data-icon="map-pin"></span>Ver mapa ao vivo</button>
           <button class="btn btn-secondary" type="button" onclick="goTo('cadastro')"><span data-icon="alert"></span>Receber alertas</button>
@@ -65,10 +65,10 @@
         <h2>Tecnologia e <span class="gradient-text">comunidade</span> trabalhando juntas</h2>
       </div>
       <div class="feature-grid">
-        <article class="feature-card"><span data-icon="sensor"></span><h3>Sensores ESP32</h3><p>Recebem leituras e exibem mudanca visual clara por nivel de agua.</p></article>
-        <article class="feature-card"><span data-icon="alert"></span><h3>Alertas operacionais</h3><p>Mostram status ativos e ocorrencias manuais do operador.</p></article>
-        <article class="feature-card"><span data-icon="shelter"></span><h3>Abrigos e doacoes</h3><p>Exibem vagas e necessidades de apoio vinculadas a cada abrigo.</p></article>
-        <article class="feature-card"><span data-icon="emergency"></span><h3>Pedido emergencial</h3><p>Visitantes e moradores podem registrar ajuda, inclusive como pendente quando estiver sem conexao.</p></article>
+        <article class="feature-card"><span data-icon="sensor"></span><h3>Sensores ESP32</h3><p>Recebem leituras e exibem mudança visual clara por nível de água.</p></article>
+        <article class="feature-card"><span data-icon="alert"></span><h3>Alertas operacionais</h3><p>Mostram status ativos e ocorrências manuais do operador.</p></article>
+        <article class="feature-card"><span data-icon="shelter"></span><h3>Abrigos e doações</h3><p>Exibem vagas e necessidades de apoio vinculadas a cada abrigo.</p></article>
+        <article class="feature-card"><span data-icon="emergency"></span><h3>Pedido emergencial</h3><p>Visitantes e moradores podem registrar ajuda, inclusive como pendente quando estiver sem conexão.</p></article>
       </div>
     </section>
 
@@ -113,26 +113,26 @@
         <label class="field span-2"><span>Nome completo</span><input id="fn" placeholder="Maria da Silva" /></label>
         <label class="field"><span>WhatsApp</span><input id="fw" placeholder="(48) 99999-9999" /></label>
         <label class="field"><span>E-mail</span><input id="fem" type="email" placeholder="maria@email.com" /></label>
-        <label class="field"><span>Senha</span><input id="fsenha" type="password" placeholder="Minimo 6 caracteres" /></label>
+        <label class="field"><span>Senha</span><input id="fsenha" type="password" placeholder="Mínimo 6 caracteres" /></label>
         <div class="address-section-head span-2">
-          <h3>Endereco principal</h3>
-          <button class="btn btn-secondary" type="button" onclick="addCadastroEndereco()"><span data-icon="map-pin"></span>Adicionar outro endereco</button>
+          <h3>Endereço principal</h3>
+          <button class="btn btn-secondary" type="button" onclick="addCadastroEndereco()"><span data-icon="map-pin"></span>Adicionar outro endereço</button>
         </div>
         <label class="field"><span>Bairro</span><select id="fbairro"></select></label>
         <label class="field"><span>Rua</span><input id="frua" placeholder="Rua das Flores" /></label>
         <label class="field"><span>Número</span><input id="fnumero" placeholder="123" /></label>
         <label class="field"><span>CEP</span><input id="fcep" placeholder="88130-000" /></label>
-        <label class="field"><span>Referência</span><input id="fref" placeholder="Proximo a escola" /></label>
+        <label class="field"><span>Referência</span><input id="fref" placeholder="Próximo à escola" /></label>
         <div class="extra-addresses span-2" id="cad-extra-addresses"></div>
         <label class="consent span-2"><input id="fcons" type="checkbox" /> <span>Concordo com uso dos dados para alertas conforme LGPD.</span></label>
       </div>
       <button class="btn btn-primary full" type="button" onclick="subForm()"><span data-icon="check"></span>Cadastrar</button>
-      <button class="btn btn-ghost full" type="button" onclick="goTo('landing')">Voltar para o inicio</button>
+      <button class="btn btn-ghost full" type="button" onclick="goTo('landing')">Voltar para o início</button>
     </div>
     <div class="form-card success-card" id="cad-succ-box" hidden>
       <span data-icon="check-circle"></span>
-      <h2>Cadastro demonstrativo concluido</h2>
-      <p>A conta visual de morador foi criada para navegacao nesta versao tecnica.</p>
+      <h2>Cadastro demonstrativo concluído</h2>
+      <p>A conta visual de morador foi criada para navegação nesta versão técnica.</p>
       <button class="btn btn-primary" type="button" onclick="goTo('map')">Mostrar conta no mapa</button>
     </div>
   </section>
@@ -151,11 +151,11 @@
           <option value="laranja">Laranja</option>
           <option value="vermelho">Vermelho</option>
         </select>
-        <button class="btn btn-ghost" id="btncrit" type="button" onclick="toggleCrit()">Criticos</button>
-        <button class="btn btn-danger" type="button" onclick="openEmergencyCenter()"><span data-icon="emergency"></span>Emergencia</button>
+        <button class="btn btn-ghost" id="btncrit" type="button" onclick="toggleCrit()">Críticos</button>
+        <button class="btn btn-danger" type="button" onclick="openEmergencyCenter()"><span data-icon="emergency"></span>Emergência</button>
         <div class="map-session-controls" id="map-session-controls" hidden>
-          <div class="operator-chip" aria-label="Usuario conectado"><span id="map-user-initials">OP</span><strong id="map-user-name">Operador</strong></div>
-          <button class="btn btn-ghost" id="map-resident-settings" type="button" onclick="openResidentSettings()" hidden><span data-icon="settings"></span>Configuracoes</button>
+          <div class="operator-chip" aria-label="Usuário conectado"><span id="map-user-initials">OP</span><strong id="map-user-name">Operador</strong></div>
+          <button class="btn btn-ghost" id="map-resident-settings" type="button" onclick="openResidentSettings()" hidden><span data-icon="settings"></span>Configurações</button>
           <button class="btn btn-ghost" type="button" onclick="fazerLogout()"><span data-icon="logout"></span>Sair</button>
         </div>
       </div>
@@ -188,7 +188,7 @@
         <button class="nav-item" id="ni-auditoria" onclick="showTab('auditoria')"><span data-icon="audit"></span>Auditoria</button>
       </nav>
       <div class="sidebar-bottom">
-        <button class="nav-item" onclick="goTo('map')"><span data-icon="map"></span>Mapa publico</button>
+        <button class="nav-item" onclick="goTo('map')"><span data-icon="map"></span>Mapa público</button>
         <button class="nav-item" onclick="fazerLogout()"><span data-icon="logout"></span>Sair</button>
       </div>
     </aside>
@@ -208,7 +208,7 @@
         <section id="tab-dashboard" class="tab active">
           <div class="kpi-grid">
             <article class="kpi critical"><span data-icon="alert"></span><strong id="kv-al">0</strong><small>Alertas vermelhos</small></article>
-            <article class="kpi warning"><span data-icon="activity"></span><strong id="kv-or">0</strong><small>Atencao elevada</small></article>
+            <article class="kpi warning"><span data-icon="activity"></span><strong id="kv-or">0</strong><small>Atenção elevada</small></article>
             <article class="kpi good"><span data-icon="sensor"></span><strong id="kv-se">0</strong><small>Sensores online</small></article>
             <article class="kpi info"><span data-icon="emergency"></span><strong id="kv-co">0</strong><small>Pedidos de ajuda</small></article>
           </div>
@@ -216,7 +216,7 @@
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <h3>Sensor de prototipo ESP32</h3>
+                  <h3>Sensor de protótipo ESP32</h3>
                   <p class="panel-subtitle">O painel e o ESP32 enviam leituras pela mesma API e atualizam mapa, alertas e auditoria.</p>
                 </div>
               </div>
@@ -228,19 +228,19 @@
         </section>
 
         <section id="tab-alertas" class="tab">
-          <div class="panel-head"><h3>Alertas</h3><div class="actions"><button class="btn btn-secondary" onclick="openPublicAlertModal()"><span data-icon="broadcast"></span>Solicitar alerta publico</button><button class="btn btn-danger" onclick="openManualModal()">Registrar ocorrencia</button></div></div>
-          <div class="table-wrap"><table><thead><tr><th>Regiao</th><th>Status</th><th>Nivel</th><th>Sensor</th><th>Origem</th><th>Acoes</th></tr></thead><tbody id="al-tbody"></tbody></table></div>
+          <div class="panel-head"><h3>Alertas</h3><div class="actions"><button class="btn btn-secondary" onclick="openPublicAlertModal()"><span data-icon="broadcast"></span>Solicitar alerta público</button><button class="btn btn-danger" onclick="openManualModal()">Registrar ocorrência</button></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Região</th><th>Status</th><th>Nível</th><th>Sensor</th><th>Origem</th><th>Ações</th></tr></thead><tbody id="al-tbody"></tbody></table></div>
         </section>
 
         <section id="tab-emergencias" class="tab">
           <div class="panel-head">
             <div>
               <h3>Pedidos de ajuda emergencial</h3>
-              <p>Fila visual para triagem e encaminhamento. Nao substitui 193, 192 ou Defesa Civil.</p>
+              <p>Fila visual para triagem e encaminhamento. Não substitui 193, 192 ou Defesa Civil.</p>
             </div>
             <button class="btn btn-danger" onclick="openEmergencyCenter()"><span data-icon="emergency"></span>Novo pedido</button>
           </div>
-          <div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Solicitante</th><th>Emergencia</th><th>Urgencia</th><th>Status</th><th>Acoes</th></tr></thead><tbody id="em-tbody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Pedido</th><th>Solicitante</th><th>Emergência</th><th>Urgência</th><th>Status</th><th>Ações</th></tr></thead><tbody id="em-tbody"></tbody></table></div>
         </section>
 
         <section id="tab-sensores" class="tab">
@@ -249,7 +249,7 @@
         </section>
 
         <section id="tab-abrigos" class="tab">
-          <div class="panel-head"><h3>Abrigos e apoio</h3><button class="btn btn-secondary" onclick="openDonationManager()">Gerenciar doacoes</button></div>
+          <div class="panel-head"><h3>Abrigos e apoio</h3><button class="btn btn-secondary" onclick="openDonationManager()">Gerenciar doações</button></div>
           <div id="sh-grid" class="card-grid"></div>
         </section>
 
@@ -259,8 +259,8 @@
         </section>
 
         <section id="tab-auditoria" class="tab">
-          <div class="panel-head"><h3>Auditoria</h3><button class="btn btn-ghost" onclick="exportAuditReport()">Gerar relatorio CSV</button></div>
-          <div class="table-wrap"><table><thead><tr><th>Hora</th><th>Usuario</th><th>Acao</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody id="hist-tbody"></tbody></table></div>
+          <div class="panel-head"><h3>Auditoria</h3><button class="btn btn-ghost" onclick="exportAuditReport()">Gerar relatório CSV</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Hora</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody id="hist-tbody"></tbody></table></div>
         </section>
       </div>
     </main>
@@ -270,3 +270,4 @@
   <script type="module" src="js/app.js?v=20260530-mvp"></script>
 </body>
 </html>
+

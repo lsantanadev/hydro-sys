@@ -15,18 +15,18 @@ export function initSelects() {
   if (senhaCadastro) {
     senhaCadastro.value = '';
     senhaCadastro.disabled = true;
-    senhaCadastro.placeholder = 'Login de morador ainda indisponivel';
+    senhaCadastro.placeholder = 'Login de morador ainda indisponível';
   }
 }
 
 export function doLogin() {
   const perfil = document.getElementById('lperfil')?.value || 'MORADOR';
   const nomePerfil = perfil === 'OPERADOR' ? 'operador' : 'morador';
-  toast(`O login de ${nomePerfil} aguarda autenticacao pela API.`);
+  toast(`O login de ${nomePerfil} aguarda autenticação pela API.`);
 }
 
 export function fazerLogout() {
-  toast('Sessao local inexistente. A autenticacao aguardara a API.');
+  toast('Sessão local inexistente. A autenticação aguardará a API.');
   goTo('landing');
 }
 
@@ -54,11 +54,11 @@ export async function subForm() {
     document.getElementById('cad-form-box').hidden = true;
     document.getElementById('cad-succ-box').hidden = false;
     const successText = document.querySelector('#cad-succ-box p');
-    if (successText) successText.textContent = 'Cadastro enviado para a API. O login sera liberado quando a autenticacao estiver implementada.';
+    if (successText) successText.textContent = 'Cadastro enviado para a API. O login será liberado quando a autenticação estiver implementada.';
     await renderMoradores();
     toast(addresses.length > 1
-      ? 'Cadastro principal concluido. Enderecos adicionais nao foram persistidos.'
-      : 'Cadastro concluido. O login aguarda autenticacao pela API.');
+      ? 'Cadastro principal concluído. Endereços adicionais não foram persistidos.'
+      : 'Cadastro concluído. O login aguarda autenticação pela API.');
   } catch (error) {
     toast(error.message);
   }
@@ -90,17 +90,17 @@ export function addCadastroEndereco() {
   root.insertAdjacentHTML('beforeend', `
     <section class="address-entry" id="${id}">
       <div class="address-entry-head">
-        <h4>Endereco adicional</h4>
+        <h4>Endereço adicional</h4>
         <button class="btn btn-ghost" type="button" onclick="removeCadastroEndereco('${id}')">Remover</button>
       </div>
       <div class="form-grid address-grid">
         <label class="field"><span>Bairro</span><select data-field="bairro">${bairroOptions()}</select></label>
         <label class="field"><span>Rua</span><input data-field="rua" placeholder="Rua das Flores"></label>
-        <label class="field"><span>Numero</span><input data-field="numero" placeholder="123"></label>
+        <label class="field"><span>Número</span><input data-field="numero" placeholder="123"></label>
         <label class="field"><span>CEP</span><input data-field="cep" placeholder="88130-000"></label>
-        <label class="field span-2"><span>Referencia</span><input data-field="referencia" placeholder="Proximo a escola"></label>
+        <label class="field span-2"><span>Referência</span><input data-field="referencia" placeholder="Próximo à escola"></label>
       </div>
-      <small>Endereco temporario: sera mantido apenas ate o envio do cadastro.</small>
+      <small>Endereço temporário: será mantido apenas até o envio do cadastro.</small>
     </section>
   `);
 }
@@ -111,8 +111,8 @@ export function removeCadastroEndereco(id) {
 
 export function openResidentSettings() {
   openModal(`
-    <h3>Configuracoes da conta</h3>
-    <p class="danger-note">As configuracoes do morador aguardam autenticacao pela API. Nenhum endereco sera salvo localmente.</p>
+    <h3>Configurações da conta</h3>
+    <p class="danger-note">As configurações do morador aguardam autenticação pela API. Nenhum endereço será salvo localmente.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" type="button" onclick="closeModal()">Fechar</button>
     </div>
@@ -128,7 +128,7 @@ function collectRegistrationAddresses() {
     referencia: value('fref'),
   };
   if (!validAddress(primary)) {
-    toast('Informe bairro, rua, numero e CEP do endereco principal.');
+    toast('Informe bairro, rua, número e CEP do endereço principal.');
     return null;
   }
   const extra = [...document.querySelectorAll('#cad-extra-addresses .address-entry')].map(entry => ({

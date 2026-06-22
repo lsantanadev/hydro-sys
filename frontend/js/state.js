@@ -16,7 +16,7 @@ export async function loadOperationalData() {
   ]);
 
   if ([sensors, shelters, audit, residents].every(result => result.status === 'rejected')) {
-    throw sensors.reason || new Error('API indisponivel.');
+    throw sensors.reason || new Error('API indisponível.');
   }
 
   return {
@@ -52,7 +52,7 @@ export function getActiveAlerts(sensors = []) {
     .filter(sensor => sensor.st !== 'verde')
     .map(sensor => ({
       id: `sensor-${sensor.id}`,
-      regiao: sensor.bairro || 'Nao informado',
+      regiao: sensor.bairro || 'Não informado',
       status: sensor.st,
       level: sensor.level,
       sensor: sensor.id,
@@ -78,7 +78,7 @@ function normalizeSensor(sensor) {
     id: sensor.sensor_code,
     nome: sensor.name,
     bairro: sensor.neighborhood || '',
-    endereco: sensor.location_description || 'Localizacao cadastrada',
+    endereco: sensor.location_description || 'Localização cadastrada',
     lat: Number(sensor.latitude),
     lng: Number(sensor.longitude),
     level,
@@ -96,7 +96,7 @@ function normalizeShelter(shelter) {
   return {
     id: shelter.id,
     nome: shelter.name,
-    endereco: shelter.address || 'Endereco nao informado',
+    endereco: shelter.address || 'Endereço não informado',
     lat: Number(shelter.latitude),
     lng: Number(shelter.longitude),
     cap: Number(shelter.capacity || 0),
