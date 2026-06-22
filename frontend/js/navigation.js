@@ -13,7 +13,7 @@ const tabs = ['dashboard', 'alertas', 'emergencias', 'sensores', 'abrigos', 'mor
 
 export function goTo(page) {
   if (page === 'admin') {
-    toast('O painel do operador aguardara autenticacao pela API.');
+    toast('O painel do operador aguardará autenticação pela API.');
     page = 'login';
   }
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));

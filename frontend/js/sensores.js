@@ -36,12 +36,12 @@ export async function renderSensors() {
 export function openSensorModal() {
   openModal(`
     <h3>Novo sensor ESP32</h3>
-    <p>Cadastre o dispositivo que aparecera no mapa publico.</p>
+    <p>Cadastre o dispositivo que aparecerá no mapa público.</p>
     <div class="form-grid modal-grid">
       <label class="field"><span>Codigo do sensor</span><input id="sensor-code" placeholder="ESP-001"></label>
       <label class="field"><span>Nome do ponto</span><input id="sensor-name" placeholder="Ponte do Rio Cubatao"></label>
       <label class="field"><span>Bairro</span><input id="sensor-neighborhood" placeholder="Centro"></label>
-      <label class="field span-2"><span>Descricao do local</span><input id="sensor-location" placeholder="Margem do rio, ao lado da ponte"></label>
+      <label class="field span-2"><span>Descrição do local</span><input id="sensor-location" placeholder="Margem do rio, ao lado da ponte"></label>
       <label class="field"><span>Latitude</span><input id="sensor-lat" type="number" step="0.000001" placeholder="-27.645"></label>
       <label class="field"><span>Longitude</span><input id="sensor-lng" type="number" step="0.000001" placeholder="-48.670"></label>
       <label class="field"><span>Limiar amarelo (cm)</span><input id="sensor-yellow" type="number" min="0" step="0.1" placeholder="5"></label>
@@ -76,13 +76,13 @@ export async function openEditSensorModal(id) {
     toast(error.message);
     return;
   }
-  if (!sensor) return toast('Sensor nao encontrado.');
+  if (!sensor) return toast('Sensor não encontrado.');
   openModal(`
     <h3>Editar sensor ${escapeHtml(sensor.id)}</h3>
     <div class="form-grid modal-grid">
       <label class="field"><span>Nome do ponto</span><input id="edit-name" value="${escapeHtml(sensor.nome)}"></label>
       <label class="field"><span>Bairro</span><input id="edit-neighborhood" value="${escapeHtml(sensor.bairro)}"></label>
-      <label class="field span-2"><span>Descricao do local</span><input id="edit-location" value="${escapeHtml(sensor.endereco)}"></label>
+      <label class="field span-2"><span>Descrição do local</span><input id="edit-location" value="${escapeHtml(sensor.endereco)}"></label>
       <label class="field"><span>Latitude</span><input id="edit-lat" type="number" step="0.000001" value="${sensor.lat}"></label>
       <label class="field"><span>Longitude</span><input id="edit-lng" type="number" step="0.000001" value="${sensor.lng}"></label>
       <label class="field"><span>Limiar amarelo (cm)</span><input id="edit-yellow" type="number" min="0" step="0.1" value="${sensor.ly}"></label>
@@ -138,7 +138,7 @@ function readSensorForm(prefix, includeCode = true) {
   const latitude = numberValue(`${prefix}-lat`);
   const longitude = numberValue(`${prefix}-lng`);
   if (![threshold_yellow, threshold_orange, threshold_red, latitude, longitude].every(Number.isFinite)) {
-    toast('Informe coordenadas e limiares numericos.');
+    toast('Informe coordenadas e limiares numéricos.');
     return null;
   }
   if (!(threshold_yellow < threshold_orange && threshold_orange < threshold_red)) {

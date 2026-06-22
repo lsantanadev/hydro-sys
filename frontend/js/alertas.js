@@ -28,15 +28,15 @@ export async function renderAlerts() {
 
 export function openPublicAlertModal() {
   openModal(`
-    <h3>Solicitar alerta publico</h3>
-    <p>Este formulario representa uma futura solicitacao para canal oficial. Nao ha envio direto nem registro nesta versao.</p>
-    <label class="field"><span>Area afetada</span><input placeholder="Bela Vista, raio proximo ao ESP-003"></label>
-    <label class="field"><span>Nivel de risco</span><select><option>laranja</option><option>vermelho</option></select></label>
-    <label class="field"><span>Mensagem</span><textarea rows="4" placeholder="Evite a regiao e acompanhe os canais oficiais."></textarea></label>
-    <p class="danger-note">Este formulario ainda nao envia nem registra solicitacoes. A confirmacao ficara disponivel quando o fluxo possuir persistencia.</p>
+    <h3>Solicitar alerta público</h3>
+    <p>Este formulário representa uma futura solicitação para canal oficial. Não há envio direto nem registro nesta versão.</p>
+    <label class="field"><span>Área afetada</span><input placeholder="Bela Vista, raio proximo ao ESP-003"></label>
+    <label class="field"><span>Nível de risco</span><select><option>laranja</option><option>vermelho</option></select></label>
+    <label class="field"><span>Mensagem</span><textarea rows="4" placeholder="Evite a região e acompanhe os canais oficiais."></textarea></label>
+    <p class="danger-note">Este formulário ainda não envia nem registra solicitações. A confirmação ficará disponível quando o fluxo possuir persistência.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-secondary" disabled>Registro indisponivel</button>
+      <button class="btn btn-secondary" disabled>Registro indisponível</button>
     </div>
   `);
 }
@@ -50,12 +50,12 @@ export async function openManualModal() {
     return;
   }
   if (!sensors.length) {
-    toast('Cadastre um sensor antes de registrar ocorrencia.');
+    toast('Cadastre um sensor antes de registrar ocorrência.');
     return;
   }
   openModal(`
-    <h3>Registrar ocorrencia manual</h3>
-    <p>A ocorrencia manual coloca o ponto selecionado em status vermelho.</p>
+    <h3>Registrar ocorrência manual</h3>
+    <p>A ocorrência manual coloca o ponto selecionado em status vermelho.</p>
     <label class="field"><span>Ponto monitorado</span>
       <select id="manual-sensor">
         ${sensors.map(sensor => `<option value="${sensor.id}">${escapeHtml(sensor.id)} - ${escapeHtml(sensor.nome)}</option>`).join('')}

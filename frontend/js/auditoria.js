@@ -23,7 +23,7 @@ export async function renderAudit() {
 export async function exportAuditReport() {
   try {
     const audit = await loadAudit();
-    const headers = ['Hora', 'Usuario', 'Acao', 'Entidade', 'Detalhes'];
+    const headers = ['Hora', 'Usuário', 'Ação', 'Entidade', 'Detalhes'];
     const rows = audit.map(item => [
       item.hora,
       item.usuario,
@@ -38,7 +38,7 @@ export async function exportAuditReport() {
     link.download = 'relatorio-auditoria-hydrosys.csv';
     link.click();
     URL.revokeObjectURL(url);
-    toast('Relatorio de auditoria gerado.');
+    toast('Relatório de auditoria gerado.');
   } catch (error) {
     toast(error.message);
   }

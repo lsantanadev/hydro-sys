@@ -18,9 +18,9 @@ export async function renderShelters() {
           <div class="donation-list">
             ${(shelter.donations || []).map(item => `
               <div class="donation-item"><span>${escapeHtml(item.item)}</span><strong>${escapeHtml(item.urgencia)}</strong></div>
-            `).join('') || '<small>Nenhuma doacao cadastrada.</small>'}
+            `).join('') || '<small>Nenhuma doação cadastrada.</small>'}
           </div>
-          <button class="btn btn-secondary full" onclick="openDonationManager(${shelter.id})">Gerenciar doacoes</button>
+          <button class="btn btn-secondary full" onclick="openDonationManager(${shelter.id})">Gerenciar doações</button>
         </article>
       `;
     }).join('') || '<p>Nenhum abrigo cadastrado.</p>';
