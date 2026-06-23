@@ -252,17 +252,26 @@
   align-items: center;
   justify-content: space-between;
   gap: 22px;
+  flex-wrap: wrap;
   border-top: 1px solid var(--border);
 }
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .footer p {
-  max-width: 420px;
-  margin: 12px 0 0;
+  margin: 0;
   font-size: 12px;
+}
+.footer-meta {
+  text-align: center;
 }
 .footer-links {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
 }
 .footer-links button {
   color: var(--text-muted);

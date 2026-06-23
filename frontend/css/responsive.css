@@ -67,7 +67,7 @@
   .admin-main { overflow: visible; }
   .admin-content { overflow: visible; }
   .admin-tools { width: 100%; justify-content: flex-start; }
-  .footer { flex-direction: column; align-items: flex-start; }
+  .footer { justify-content: flex-start; }
 }
 
 @media (max-width: 560px) {
