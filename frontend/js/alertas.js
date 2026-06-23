@@ -77,7 +77,7 @@ export async function saveManualOccurrence() {
     return;
   }
   try {
-    await api.createManualOccurrence({ sensor_code: sensorCode, reason, actor: 'operador' });
+    await api.createManualOccurrence({ sensor_code: sensorCode, reason });
     closeModal();
     await refreshOperationalViews();
     toast('Ocorrencia manual registrada.');

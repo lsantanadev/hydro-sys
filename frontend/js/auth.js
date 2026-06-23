@@ -19,14 +19,36 @@ export function initSelects() {
   }
 }
 
-export function doLogin() {
+export async function doLogin() {
   const perfil = document.getElementById('lperfil')?.value || 'MORADOR';
   const nomePerfil = perfil === 'OPERADOR' ? 'operador' : 'morador';
-  toast(`O login de ${nomePerfil} aguarda autenticação pela API.`);
+  if (perfil !== 'OPERADOR') {
+    toast(`O login de ${nomePerfil} aguardara autenticacao pela API.`);
+    return;
+  }
+  const email = value('le').toLowerCase();
+  const password = document.getElementById('lp')?.value || '';
+  if (!email || !password) {
+    toast('Informe e-mail e senha do operador.');
+    return;
+  }
+  try {
+    const session = await api.login(email, password);
+    api.setAuthToken(session.access_token);
+    localStorage.setItem('hydrosys_operator_user', JSON.stringify(session.user));
+    toast('Operador autenticado.');
+    goTo('admin');
+  } catch (error) {
+    api.clearAuthToken();
+    localStorage.removeItem('hydrosys_operator_user');
+    toast(error.message);
+  }
 }
 
 export function fazerLogout() {
-  toast('Sessão local inexistente. A autenticação aguardará a API.');
+  api.clearAuthToken();
+  localStorage.removeItem('hydrosys_operator_user');
+  toast('Sessao encerrada.');
   goTo('landing');
 }
 

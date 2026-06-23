@@ -2,14 +2,18 @@ from datetime import datetime, timezone
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import AuditEvent, ManualOccurrence, Resident, Sensor, SensorReading, Shelter
+from app.models import AppUser, AuditEvent, ManualOccurrence, Resident, Sensor, SensorReading, Shelter
 from app.schemas import (
     AuditOut,
+    AuthUserOut,
+    LoginRequest,
+    LoginResponse,
     ManualOccurrenceClose,
     ManualOccurrenceCreate,
     ManualOccurrenceOut,
@@ -22,10 +26,12 @@ from app.schemas import (
     SensorUpdate,
     ShelterOut,
 )
+from app.security import create_access_token, decode_access_token, verify_password
 from app.services import audit
 
 
 router = APIRouter(prefix="/api")
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def status_by_level(sensor: Sensor, level: float) -> str:
@@ -147,14 +153,76 @@ def audit_payload(payload: dict) -> str:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
 
+def operator_out(user: AppUser) -> AuthUserOut:
+    return AuthUserOut(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        role=user.role,
+    )
+
+
+def unauthorized_login() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="E-mail ou senha invalidos.",
+    )
+
+
+def require_operator(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> AppUser:
+    if not credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticacao obrigatoria.")
+    payload = decode_access_token(credentials.credentials)
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sessao invalida ou expirada.")
+    if payload.get("role") != "OPERATOR":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito ao operador.")
+    try:
+        user_id = int(payload.get("sub", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sessao invalida.") from None
+    user = db.get(AppUser, user_id)
+    if not user or not user.active or user.role != "OPERATOR":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Operador inativo ou inexistente.")
+    return user
+
+
 @router.get("/health")
 def health(db: Session = Depends(get_db)):
     db.execute(text("select 1"))
     return {"status": "ok", "database": "postgresql"}
 
 
+@router.post("/auth/login", response_model=LoginResponse)
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    user = db.scalar(
+        select(AppUser).where(
+            func.lower(AppUser.email) == payload.email,
+            AppUser.role == "OPERATOR",
+            AppUser.active.is_(True),
+        )
+    )
+    if not user or not verify_password(payload.password, user.password_hash):
+        raise unauthorized_login()
+    user.last_login_at = datetime.now(timezone.utc)
+    audit(db, user.email, "LOGIN_OPERADOR", "auth")
+    db.commit()
+    return LoginResponse(
+        access_token=create_access_token(str(user.id), user.role),
+        user=operator_out(user),
+    )
+
+
+@router.get("/auth/me", response_model=AuthUserOut)
+def me(operator: AppUser = Depends(require_operator)):
+    return operator_out(operator)
+
+
 @router.post("/sensors", response_model=SensorOut, status_code=status.HTTP_201_CREATED)
-def create_sensor(payload: SensorCreate, db: Session = Depends(get_db)):
+def create_sensor(payload: SensorCreate, db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
     code = payload.sensor_code.strip().upper()
     if db.scalar(select(Sensor).where(Sensor.sensor_code == code)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe sensor com este código.")
@@ -178,7 +246,7 @@ def create_sensor(payload: SensorCreate, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe sensor com este código.") from None
-    audit(db, "operador", "SENSOR_CRIADO", sensor.sensor_code, sensor.name)
+    audit(db, operator.email, "SENSOR_CRIADO", sensor.sensor_code, sensor.name)
     db.commit()
     db.refresh(sensor)
     return serialize_sensor(sensor)
@@ -191,7 +259,12 @@ def list_sensors(db: Session = Depends(get_db)):
 
 
 @router.put("/sensors/{sensor_id}", response_model=SensorOut)
-def update_sensor(sensor_id: int, payload: SensorUpdate, db: Session = Depends(get_db)):
+def update_sensor(
+    sensor_id: int,
+    payload: SensorUpdate,
+    db: Session = Depends(get_db),
+    operator: AppUser = Depends(require_operator),
+):
     sensor = sensor_or_404(db, sensor_id)
     data = payload.model_dump(exclude_unset=True)
     if not data:
@@ -209,12 +282,12 @@ def update_sensor(sensor_id: int, payload: SensorUpdate, db: Session = Depends(g
     for field, value in data.items():
         setattr(sensor, field, value)
     sensor.current_status = status_by_level(sensor, float(sensor.current_level))
-    audit(db, "operador", "SENSOR_ATUALIZADO", sensor.sensor_code, audit_payload(data))
+    audit(db, operator.email, "SENSOR_ATUALIZADO", sensor.sensor_code, audit_payload(data))
     threshold_fields = {"threshold_yellow", "threshold_orange", "threshold_red"}
     if threshold_fields.intersection(data):
         audit(
             db,
-            "operador",
+            operator.email,
             "LIMIARES_ALTERADOS",
             sensor.sensor_code,
             audit_payload(
@@ -234,12 +307,12 @@ def update_sensor(sensor_id: int, payload: SensorUpdate, db: Session = Depends(g
 
 
 @router.delete("/sensors/{sensor_id}", status_code=status.HTTP_204_NO_CONTENT)
-def deactivate_sensor(sensor_id: int, db: Session = Depends(get_db)):
+def deactivate_sensor(sensor_id: int, db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
     sensor = sensor_or_404(db, sensor_id)
     if not sensor.active:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     sensor.active = False
-    audit(db, "operador", "SENSOR_DESATIVADO", sensor.sensor_code)
+    audit(db, operator.email, "SENSOR_DESATIVADO", sensor.sensor_code)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -320,7 +393,11 @@ def map_shelters(db: Session = Depends(get_db)):
     response_model=ManualOccurrenceOut,
     status_code=status.HTTP_201_CREATED,
 )
-def create_manual_occurrence(payload: ManualOccurrenceCreate, db: Session = Depends(get_db)):
+def create_manual_occurrence(
+    payload: ManualOccurrenceCreate,
+    db: Session = Depends(get_db),
+    operator: AppUser = Depends(require_operator),
+):
     if payload.sensor_id:
         sensor = sensor_or_404(db, payload.sensor_id)
     elif payload.sensor_code:
@@ -332,7 +409,7 @@ def create_manual_occurrence(payload: ManualOccurrenceCreate, db: Session = Depe
             status_code=status.HTTP_409_CONFLICT,
             detail="Já existe uma ocorrência manual aberta para este sensor.",
         )
-    actor = payload.actor.strip()
+    actor = operator.email
     occurrence = ManualOccurrence(
         sensor_id=sensor.id,
         status="vermelho",
@@ -356,6 +433,7 @@ def close_manual_occurrence(
     occurrence_id: int,
     payload: ManualOccurrenceClose,
     db: Session = Depends(get_db),
+    operator: AppUser = Depends(require_operator),
 ):
     occurrence = db.get(ManualOccurrence, occurrence_id)
     if not occurrence:
@@ -369,7 +447,7 @@ def close_manual_occurrence(
             detail="A ocorrência manual ja foi encerrada.",
         )
     sensor = sensor_or_404(db, occurrence.sensor_id)
-    actor = payload.actor.strip()
+    actor = operator.email
     now = datetime.now(timezone.utc)
     occurrence.status = "encerrado"
     occurrence.closed_at = now
@@ -423,12 +501,12 @@ def create_resident(payload: ResidentCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/residents", response_model=list[ResidentOut])
-def list_residents(db: Session = Depends(get_db)):
+def list_residents(db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
     return db.scalars(select(Resident).order_by(Resident.id.desc()).limit(250)).all()
 
 
 @router.get("/audit", response_model=list[AuditOut])
-def list_audit(db: Session = Depends(get_db)):
+def list_audit(db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
     events = db.scalars(select(AuditEvent).order_by(AuditEvent.id.desc()).limit(250)).all()
     return [
         AuditOut(

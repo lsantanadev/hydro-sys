@@ -122,6 +122,34 @@ class ResidentOut(BaseModel):
     created_at: datetime
 
 
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    email: str = Field(min_length=3, max_length=160)
+    password: str = Field(min_length=1, max_length=255)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str):
+        value = value.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
+            raise ValueError("Informe um e-mail valido.")
+        return value
+
+
+class AuthUserOut(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: AuthUserOut
+
+
 class ManualOccurrenceCreate(BaseModel):
     sensor_id: int | None = None
     sensor_code: str | None = None

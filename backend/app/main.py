@@ -15,6 +15,8 @@ APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 CORS_ORIGINS = _cors_origins()
 if APP_ENV in {"production", "prod"} and "*" in CORS_ORIGINS:
     raise RuntimeError("Em producao, configure CORS_ORIGINS com a URL publica do frontend.")
+if APP_ENV in {"production", "prod"} and not os.getenv("JWT_SECRET_KEY", "").strip():
+    raise RuntimeError("Em producao, configure JWT_SECRET_KEY com um segredo forte.")
 
 
 app = FastAPI(

@@ -1,5 +1,7 @@
 import { CONFIG } from './config.js';
 
+const TOKEN_KEY = 'hydrosys_operator_token';
+
 function apiBaseUrl() {
   const baseUrl = CONFIG.api.baseUrl?.trim() || '';
   if (!baseUrl) {
@@ -9,12 +11,24 @@ function apiBaseUrl() {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${apiBaseUrl()}${path}`, options);
+  const response = await fetch(`${apiBaseUrl()}${path}`, {
+    ...options,
+    headers: requestHeaders(options.headers),
+  });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(errorMessage(payload));
   }
   return payload;
+}
+
+function requestHeaders(headers = {}) {
+  const nextHeaders = { ...headers };
+  const token = authToken();
+  if (token && !nextHeaders.Authorization) {
+    nextHeaders.Authorization = `Bearer ${token}`;
+  }
+  return nextHeaders;
 }
 
 function errorMessage(payload) {
@@ -41,8 +55,24 @@ function jsonOptions(body, options = {}) {
 }
 
 export const api = {
+  authToken,
+  setAuthToken(token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  },
+  clearAuthToken() {
+    localStorage.removeItem(TOKEN_KEY);
+  },
+  hasAuthToken() {
+    return Boolean(authToken());
+  },
   health() {
     return request('/health');
+  },
+  login(email, password) {
+    return request('/auth/login', jsonOptions({ email, password }, { method: 'POST' }));
+  },
+  me() {
+    return request('/auth/me');
   },
   sensors() {
     return request('/sensors');
@@ -82,3 +112,7 @@ export const api = {
     }, { method: 'POST' }));
   },
 };
+
+function authToken() {
+  return localStorage.getItem(TOKEN_KEY) || '';
+}

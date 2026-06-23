@@ -7,6 +7,7 @@ import { renderEmergencyRequests } from './emergencia.js';
 import { renderMoradores } from './auth.js';
 import { renderAudit } from './auditoria.js';
 import { initMap, renderMap } from './map.js';
+import { api } from './api.js';
 import { toast } from './ui.js';
 
 const tabs = ['dashboard', 'alertas', 'emergencias', 'sensores', 'abrigos', 'moradores', 'auditoria'];
@@ -16,6 +17,7 @@ const routeByPage = {
   map: 'mapa',
   cadastro: 'cadastro',
   login: 'login',
+  admin: 'painel',
 };
 
 const pageByRoute = {
@@ -24,6 +26,8 @@ const pageByRoute = {
   map: 'map',
   cadastro: 'cadastro',
   login: 'login',
+  painel: 'admin',
+  admin: 'admin',
 };
 
 function routeFromHash() {
@@ -53,9 +57,11 @@ export function initNavigation() {
 }
 
 export function goTo(page, options = {}) {
-  if (page === 'admin') {
-    toast('O painel do operador aguardará autenticação pela API.');
+  let redirectedToLogin = false;
+  if (page === 'admin' && !api.hasAuthToken()) {
+    toast('Entre como operador para acessar o painel.');
     page = 'login';
+    redirectedToLogin = true;
   }
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.getElementById(`pg-${page}`)?.classList.add('active');
@@ -65,8 +71,11 @@ export function goTo(page, options = {}) {
     initMap();
     setTimeout(renderMap, 80);
   }
-  if (options.updateHash !== false) {
-    updateHash(page, Boolean(options.replaceHash));
+  if (page === 'admin') {
+    showTab(uiState.adminTab);
+  }
+  if (options.updateHash !== false || redirectedToLogin) {
+    updateHash(page, Boolean(options.replaceHash || redirectedToLogin));
   }
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
