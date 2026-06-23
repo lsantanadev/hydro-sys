@@ -37,27 +37,32 @@ export function openSensorModal() {
   openModal(`
     <h3>Novo sensor ESP32</h3>
     <p>Cadastre o dispositivo que aparecerá no mapa público.</p>
-    <div class="form-grid modal-grid">
-      <label class="field"><span>Codigo do sensor</span><input id="sensor-code" placeholder="ESP-001"></label>
-      <label class="field"><span>Nome do ponto</span><input id="sensor-name" placeholder="Ponte do Rio Cubatao"></label>
-      <label class="field"><span>Bairro</span><input id="sensor-neighborhood" placeholder="Centro"></label>
-      <label class="field span-2"><span>Descrição do local</span><input id="sensor-location" placeholder="Margem do rio, ao lado da ponte"></label>
-      <label class="field"><span>Latitude</span><input id="sensor-lat" type="number" step="0.000001" placeholder="-27.645"></label>
-      <label class="field"><span>Longitude</span><input id="sensor-lng" type="number" step="0.000001" placeholder="-48.670"></label>
-      <label class="field"><span>Limiar amarelo (cm)</span><input id="sensor-yellow" type="number" min="0" step="0.1" placeholder="5"></label>
-      <label class="field"><span>Limiar laranja (cm)</span><input id="sensor-orange" type="number" min="0" step="0.1" placeholder="10"></label>
-      <label class="field"><span>Limiar vermelho (cm)</span><input id="sensor-red" type="number" min="0" step="0.1" placeholder="15"></label>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveSensorCreate()">Cadastrar sensor</button>
-    </div>
+    <form id="sensor-create-form" onsubmit="event.preventDefault(); saveSensorCreate()">
+      <div class="form-grid modal-grid">
+        <label class="field"><span>Código do sensor</span><input id="sensor-code" maxlength="50" placeholder="ESP-001" autocomplete="off" required></label>
+        <label class="field"><span>Nome do ponto</span><input id="sensor-name" maxlength="120" placeholder="Ponte do Rio Cubatão" required></label>
+        <label class="field"><span>Bairro</span><input id="sensor-neighborhood" maxlength="120" placeholder="Centro"></label>
+        <label class="field span-2"><span>Descrição do local</span><input id="sensor-location" maxlength="255" placeholder="Margem do rio, ao lado da ponte"></label>
+        <label class="field"><span>Latitude</span><input id="sensor-lat" type="number" min="-90" max="90" step="0.000001" placeholder="-27.645" required></label>
+        <label class="field"><span>Longitude</span><input id="sensor-lng" type="number" min="-180" max="180" step="0.000001" placeholder="-48.670" required></label>
+        <label class="field"><span>Limiar amarelo (cm)</span><input id="sensor-yellow" type="number" min="0" step="0.1" placeholder="5" required></label>
+        <label class="field"><span>Limiar laranja (cm)</span><input id="sensor-orange" type="number" min="0" step="0.1" placeholder="10" required></label>
+        <label class="field"><span>Limiar vermelho (cm)</span><input id="sensor-red" type="number" min="0" step="0.1" placeholder="15" required></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeModal()">Cancelar</button>
+        <button id="sensor-submit" class="btn btn-primary" type="submit">Cadastrar sensor</button>
+      </div>
+    </form>
   `);
+  document.getElementById('sensor-code')?.focus();
 }
 
 export async function saveSensorCreate() {
   const payload = readSensorForm('sensor');
   if (!payload) return;
+  const submit = document.getElementById('sensor-submit');
+  if (submit) submit.disabled = true;
   try {
     await api.createSensor(payload);
     closeModal();
@@ -65,6 +70,7 @@ export async function saveSensorCreate() {
     toast('Sensor cadastrado no banco.');
   } catch (error) {
     toast(error.message);
+    if (submit) submit.disabled = false;
   }
 }
 
@@ -91,7 +97,7 @@ export async function openEditSensorModal(id) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" type="button" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-danger" type="button" onclick="deleteSensor(${sensor.apiId})">Desativar</button>
+      <button id="sensor-delete" class="btn btn-danger" type="button" onclick="deleteSensor(${sensor.apiId}, '${escapeAttribute(sensor.id)}')">Desativar</button>
       <button class="btn btn-primary" type="button" onclick="saveSensorEdit(${sensor.apiId})">Salvar alteracoes</button>
     </div>
   `);
@@ -110,7 +116,13 @@ export async function saveSensorEdit(id) {
   }
 }
 
-export async function deleteSensor(id) {
+export async function deleteSensor(id, sensorCode = '') {
+  const label = sensorCode || 'este sensor';
+  if (!window.confirm(`Desativar ${label}? O sensor deixara de aparecer no mapa publico.`)) {
+    return;
+  }
+  const button = document.getElementById('sensor-delete');
+  if (button) button.disabled = true;
   try {
     await api.deleteSensor(id);
     closeModal();
@@ -118,6 +130,7 @@ export async function deleteSensor(id) {
     toast('Sensor desativado.');
   } catch (error) {
     toast(error.message);
+    if (button) button.disabled = false;
   }
 }
 
@@ -141,6 +154,14 @@ function readSensorForm(prefix, includeCode = true) {
     toast('Informe coordenadas e limiares numéricos.');
     return null;
   }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    toast('Informe coordenadas válidas: latitude entre -90 e 90, longitude entre -180 e 180.');
+    return null;
+  }
+  if ([threshold_yellow, threshold_orange, threshold_red].some(value => value < 0)) {
+    toast('Os limiares não podem ser negativos.');
+    return null;
+  }
   if (!(threshold_yellow < threshold_orange && threshold_orange < threshold_red)) {
     toast('Use limiares crescentes: amarelo < laranja < vermelho.');
     return null;
@@ -162,7 +183,11 @@ function readSensorForm(prefix, includeCode = true) {
   if (includeCode) {
     payload.sensor_code = value(`${prefix}-code`).toUpperCase();
     if (!payload.sensor_code) {
-      toast('Informe o codigo do sensor.');
+      toast('Informe o código do sensor.');
+      return null;
+    }
+    if (!/^[A-Z0-9_-]+$/.test(payload.sensor_code)) {
+      toast('Use apenas letras, números, hífen ou underscore no código do sensor.');
       return null;
     }
   }
@@ -184,4 +209,8 @@ function escapeHtml(text) {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
+}
+
+function escapeAttribute(text) {
+  return escapeHtml(text).replaceAll("'", '&#39;');
 }
