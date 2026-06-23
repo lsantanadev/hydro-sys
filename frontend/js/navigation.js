@@ -11,7 +11,48 @@ import { toast } from './ui.js';
 
 const tabs = ['dashboard', 'alertas', 'emergencias', 'sensores', 'abrigos', 'moradores', 'auditoria'];
 
-export function goTo(page) {
+const routeByPage = {
+  landing: 'inicio',
+  map: 'mapa',
+  cadastro: 'cadastro',
+  login: 'login',
+};
+
+const pageByRoute = {
+  inicio: 'landing',
+  mapa: 'map',
+  map: 'map',
+  cadastro: 'cadastro',
+  login: 'login',
+};
+
+function routeFromHash() {
+  const route = window.location.hash.replace(/^#\/?/, '').trim().toLowerCase();
+  return pageByRoute[route] || 'landing';
+}
+
+function updateHash(page, replace = false) {
+  const route = routeByPage[page] || routeByPage.landing;
+  const nextHash = `#${route}`;
+  if (window.location.hash === nextHash) return;
+  const method = replace ? 'replaceState' : 'pushState';
+  window.history[method](null, '', nextHash);
+}
+
+function syncRouteFromHash() {
+  goTo(routeFromHash(), { updateHash: false });
+}
+
+export function initNavigation() {
+  if (!window.location.hash) {
+    updateHash('landing', true);
+  }
+  syncRouteFromHash();
+  window.addEventListener('hashchange', syncRouteFromHash);
+  window.addEventListener('popstate', syncRouteFromHash);
+}
+
+export function goTo(page, options = {}) {
   if (page === 'admin') {
     toast('O painel do operador aguardará autenticação pela API.');
     page = 'login';
@@ -23,6 +64,9 @@ export function goTo(page) {
   if (page === 'map') {
     initMap();
     setTimeout(renderMap, 80);
+  }
+  if (options.updateHash !== false) {
+    updateHash(page, Boolean(options.replaceHash));
   }
   window.scrollTo({ top: 0, behavior: 'auto' });
 }

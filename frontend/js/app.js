@@ -9,7 +9,7 @@ import {
   removeCadastroEndereco,
   openResidentSettings,
 } from './auth.js';
-import { goTo, showTab, toggleMenu } from './navigation.js';
+import { goTo, initNavigation, showTab, toggleMenu } from './navigation.js';
 import { initMap, applyFilters, toggleCrit } from './map.js';
 import {
   renderDashboard,
@@ -93,6 +93,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   hydrateIcons();
   initRainEffect();
   initSelects();
+  initNavigation();
   await renderAll();
   startSensorPolling();
   document.addEventListener('submit', event => event.preventDefault());
