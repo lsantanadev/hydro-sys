@@ -269,6 +269,7 @@ def update_sensor(
     data = payload.model_dump(exclude_unset=True)
     if not data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Informe ao menos um campo para atualizar.")
+    threshold_fields = ("threshold_yellow", "threshold_orange", "threshold_red")
     previous_thresholds = {
         "threshold_yellow": float(sensor.threshold_yellow),
         "threshold_orange": float(sensor.threshold_orange),
@@ -277,14 +278,28 @@ def update_sensor(
     yellow = data.get("threshold_yellow", float(sensor.threshold_yellow))
     orange = data.get("threshold_orange", float(sensor.threshold_orange))
     red = data.get("threshold_red", float(sensor.threshold_red))
+    new_thresholds = {
+        "threshold_yellow": float(yellow),
+        "threshold_orange": float(orange),
+        "threshold_red": float(red),
+    }
+    if min(new_thresholds.values()) <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Os limiares precisam ser maiores que zero.")
     if not (yellow < orange < red):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Os limiares precisam seguir amarelo < laranja < vermelho.")
+    threshold_changes = {
+        field: {
+            "anterior": previous_thresholds[field],
+            "novo": new_thresholds[field],
+        }
+        for field in threshold_fields
+        if previous_thresholds[field] != new_thresholds[field]
+    }
     for field, value in data.items():
         setattr(sensor, field, value)
     sensor.current_status = status_by_level(sensor, float(sensor.current_level))
     audit(db, operator.email, "SENSOR_ATUALIZADO", sensor.sensor_code, audit_payload(data))
-    threshold_fields = {"threshold_yellow", "threshold_orange", "threshold_red"}
-    if threshold_fields.intersection(data):
+    if threshold_changes:
         audit(
             db,
             operator.email,
@@ -292,12 +307,9 @@ def update_sensor(
             sensor.sensor_code,
             audit_payload(
                 {
+                    "alterados": threshold_changes,
                     "antes": previous_thresholds,
-                    "depois": {
-                        "threshold_yellow": float(sensor.threshold_yellow),
-                        "threshold_orange": float(sensor.threshold_orange),
-                        "threshold_red": float(sensor.threshold_red),
-                    },
+                    "depois": new_thresholds,
                 }
             ),
         )

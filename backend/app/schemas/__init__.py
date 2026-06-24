@@ -13,9 +13,9 @@ class SensorBase(BaseModel):
     location_description: str | None = Field(default=None, max_length=255)
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
-    threshold_yellow: float = Field(ge=0)
-    threshold_orange: float = Field(ge=0)
-    threshold_red: float = Field(ge=0)
+    threshold_yellow: float = Field(gt=0)
+    threshold_orange: float = Field(gt=0)
+    threshold_red: float = Field(gt=0)
 
     @field_validator("sensor_code")
     @classmethod
@@ -48,9 +48,9 @@ class SensorUpdate(BaseModel):
     location_description: str | None = Field(default=None, max_length=255)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
-    threshold_yellow: float | None = Field(default=None, ge=0)
-    threshold_orange: float | None = Field(default=None, ge=0)
-    threshold_red: float | None = Field(default=None, ge=0)
+    threshold_yellow: float | None = Field(default=None, gt=0)
+    threshold_orange: float | None = Field(default=None, gt=0)
+    threshold_red: float | None = Field(default=None, gt=0)
     active: bool | None = None
 
     @field_validator("neighborhood", "location_description")
