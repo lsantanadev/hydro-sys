@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { api } from './api.js';
 import { uiState, loadSensors, loadShelters } from './state.js';
 import { icon, hydrateIcons } from './icons.js';
 
@@ -12,13 +13,37 @@ export function renderMapSession() {
   const residentSettings = document.getElementById('map-resident-settings');
   const userInitialsRoot = document.getElementById('map-user-initials');
   const userNameRoot = document.getElementById('map-user-name');
+  const operatorSession = operatorUser();
 
-  if (publicBack) publicBack.hidden = false;
-  if (operatorBack) operatorBack.hidden = true;
-  if (sessionControls) sessionControls.hidden = true;
+  if (publicBack) publicBack.hidden = Boolean(operatorSession);
+  if (operatorBack) operatorBack.hidden = !operatorSession;
+  if (sessionControls) sessionControls.hidden = !operatorSession;
   if (residentSettings) residentSettings.hidden = true;
-  if (userInitialsRoot) userInitialsRoot.textContent = '';
-  if (userNameRoot) userNameRoot.textContent = '';
+  if (userInitialsRoot) userInitialsRoot.textContent = operatorSession?.initials || '';
+  if (userNameRoot) userNameRoot.textContent = operatorSession?.name || '';
+}
+
+function operatorUser() {
+  if (!api.hasAuthToken()) return null;
+  try {
+    const user = JSON.parse(localStorage.getItem('hydrosys_operator_user') || '{}');
+    const name = user.name || user.email || 'Operador';
+    return {
+      name,
+      initials: initials(name),
+    };
+  } catch {
+    return {
+      name: 'Operador',
+      initials: 'OP',
+    };
+  }
+}
+
+function initials(name) {
+  const parts = String(name || 'Operador').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'OP';
+  return parts.slice(0, 2).map(part => part[0]).join('').toUpperCase();
 }
 
 function color(status) {
