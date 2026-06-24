@@ -21,7 +21,12 @@ export async function renderSensors() {
           <p>${escapeHtml(sensor.endereco)}</p>
           <strong class="reading">${sensor.level} cm</strong>
           <div class="meter"><span style="width:${pct}%"></span></div>
-          <small>A:${sensor.ly} L:${sensor.ll} V:${sensor.lr} - ${sensor.reading}</small>
+          <div class="sensor-thresholds" aria-label="Limiares configurados">
+            <span><small>Amarelo</small><strong>${sensor.ly} cm</strong></span>
+            <span><small>Laranja</small><strong>${sensor.ll} cm</strong></span>
+            <span><small>Vermelho</small><strong>${sensor.lr} cm</strong></span>
+          </div>
+          <small>Última leitura: ${sensor.reading}</small>
           <small>Conexao: ${sensor.status}</small>
           <button class="btn btn-ghost full" type="button" onclick="openEditSensorModal(${sensor.apiId})"><span data-icon="settings"></span>Editar sensor</button>
         </article>
@@ -45,9 +50,9 @@ export function openSensorModal() {
         <label class="field span-2"><span>Descrição do local</span><input id="sensor-location" maxlength="255" placeholder="Margem do rio, ao lado da ponte"></label>
         <label class="field"><span>Latitude</span><input id="sensor-lat" type="number" min="-90" max="90" step="0.000001" placeholder="-27.645" required></label>
         <label class="field"><span>Longitude</span><input id="sensor-lng" type="number" min="-180" max="180" step="0.000001" placeholder="-48.670" required></label>
-        <label class="field"><span>Limiar amarelo (cm)</span><input id="sensor-yellow" type="number" min="0" step="0.1" placeholder="5" required></label>
-        <label class="field"><span>Limiar laranja (cm)</span><input id="sensor-orange" type="number" min="0" step="0.1" placeholder="10" required></label>
-        <label class="field"><span>Limiar vermelho (cm)</span><input id="sensor-red" type="number" min="0" step="0.1" placeholder="15" required></label>
+        <label class="field"><span>Limiar amarelo (cm)</span><input id="sensor-yellow" type="number" min="0.1" step="0.1" placeholder="5" required></label>
+        <label class="field"><span>Limiar laranja (cm)</span><input id="sensor-orange" type="number" min="0.1" step="0.1" placeholder="10" required></label>
+        <label class="field"><span>Limiar vermelho (cm)</span><input id="sensor-red" type="number" min="0.1" step="0.1" placeholder="15" required></label>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" onclick="closeModal()">Cancelar</button>
@@ -85,27 +90,31 @@ export async function openEditSensorModal(id) {
   if (!sensor) return toast('Sensor não encontrado.');
   openModal(`
     <h3>Editar sensor ${escapeHtml(sensor.id)}</h3>
-    <div class="form-grid modal-grid">
-      <label class="field"><span>Nome do ponto</span><input id="edit-name" value="${escapeHtml(sensor.nome)}"></label>
-      <label class="field"><span>Bairro</span><input id="edit-neighborhood" value="${escapeHtml(sensor.bairro)}"></label>
-      <label class="field span-2"><span>Descrição do local</span><input id="edit-location" value="${escapeHtml(sensor.endereco)}"></label>
-      <label class="field"><span>Latitude</span><input id="edit-lat" type="number" step="0.000001" value="${sensor.lat}"></label>
-      <label class="field"><span>Longitude</span><input id="edit-lng" type="number" step="0.000001" value="${sensor.lng}"></label>
-      <label class="field"><span>Limiar amarelo (cm)</span><input id="edit-yellow" type="number" min="0" step="0.1" value="${sensor.ly}"></label>
-      <label class="field"><span>Limiar laranja (cm)</span><input id="edit-orange" type="number" min="0" step="0.1" value="${sensor.ll}"></label>
-      <label class="field"><span>Limiar vermelho (cm)</span><input id="edit-red" type="number" min="0" step="0.1" value="${sensor.lr}"></label>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" type="button" onclick="closeModal()">Cancelar</button>
-      <button id="sensor-delete" class="btn btn-danger" type="button" onclick="deleteSensor(${sensor.apiId}, '${escapeAttribute(sensor.id)}')">Desativar</button>
-      <button class="btn btn-primary" type="button" onclick="saveSensorEdit(${sensor.apiId})">Salvar alteracoes</button>
-    </div>
+    <form id="sensor-edit-form" onsubmit="event.preventDefault(); saveSensorEdit(${sensor.apiId})">
+      <div class="form-grid modal-grid">
+        <label class="field"><span>Nome do ponto</span><input id="edit-name" value="${escapeHtml(sensor.nome)}" required></label>
+        <label class="field"><span>Bairro</span><input id="edit-neighborhood" value="${escapeHtml(sensor.bairro)}"></label>
+        <label class="field span-2"><span>Descrição do local</span><input id="edit-location" value="${escapeHtml(sensor.endereco)}"></label>
+        <label class="field"><span>Latitude</span><input id="edit-lat" type="number" step="0.000001" value="${sensor.lat}" required></label>
+        <label class="field"><span>Longitude</span><input id="edit-lng" type="number" step="0.000001" value="${sensor.lng}" required></label>
+        <label class="field"><span>Limiar amarelo (cm)</span><input id="edit-yellow" type="number" min="0.1" step="0.1" value="${sensor.ly}" required></label>
+        <label class="field"><span>Limiar laranja (cm)</span><input id="edit-orange" type="number" min="0.1" step="0.1" value="${sensor.ll}" required></label>
+        <label class="field"><span>Limiar vermelho (cm)</span><input id="edit-red" type="number" min="0.1" step="0.1" value="${sensor.lr}" required></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" onclick="closeModal()">Cancelar</button>
+        <button id="sensor-delete" class="btn btn-danger" type="button" onclick="deleteSensor(${sensor.apiId}, '${escapeAttribute(sensor.id)}')">Desativar</button>
+        <button id="sensor-edit-submit" class="btn btn-primary" type="submit">Salvar alteracoes</button>
+      </div>
+    </form>
   `);
 }
 
 export async function saveSensorEdit(id) {
   const payload = readSensorForm('edit', false);
   if (!payload) return;
+  const submit = document.getElementById('sensor-edit-submit');
+  if (submit) submit.disabled = true;
   try {
     await api.updateSensor(id, payload);
     closeModal();
@@ -113,6 +122,7 @@ export async function saveSensorEdit(id) {
     toast('Sensor atualizado.');
   } catch (error) {
     toast(error.message);
+    if (submit) submit.disabled = false;
   }
 }
 
@@ -158,8 +168,8 @@ function readSensorForm(prefix, includeCode = true) {
     toast('Informe coordenadas válidas: latitude entre -90 e 90, longitude entre -180 e 180.');
     return null;
   }
-  if ([threshold_yellow, threshold_orange, threshold_red].some(value => value < 0)) {
-    toast('Os limiares não podem ser negativos.');
+  if ([threshold_yellow, threshold_orange, threshold_red].some(value => value <= 0)) {
+    toast('Os limiares precisam ser maiores que zero.');
     return null;
   }
   if (!(threshold_yellow < threshold_orange && threshold_orange < threshold_red)) {

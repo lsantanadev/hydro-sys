@@ -21,7 +21,7 @@ export const CONFIG = {
   ],
   operatorLoginEnabled: Boolean(runtimeConfig.operatorLoginEnabled),
   api: {
-    baseUrl: runtimeConfig.apiBaseUrl || localApiUrl,
+    baseUrl: localApiUrl || runtimeConfig.apiBaseUrl,
     pollIntervalMs: Number(runtimeConfig.pollIntervalMs) || 2000,
   },
 };

@@ -451,6 +451,27 @@
 .reading { color: var(--primary); font-family: var(--mono); }
 .meter { height: 7px; margin: 10px 0 8px; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
 .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--gradient); transition: width .35s ease; }
+.sensor-thresholds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+.sensor-thresholds span {
+  padding: 7px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.sensor-thresholds small {
+  margin: 0 0 3px;
+  font-size: 10px;
+}
+.sensor-thresholds strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+}
 .donation-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .donation-item {
   display: flex;
