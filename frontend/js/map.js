@@ -23,6 +23,15 @@ export function renderMapSession() {
   if (userNameRoot) userNameRoot.textContent = operatorSession?.name || '';
 }
 
+export function toggleMapMenu(force = null) {
+  const menu = document.getElementById('map-actions');
+  const button = document.getElementById('map-menu-toggle');
+  if (!menu) return;
+  const shouldOpen = force === null ? !menu.classList.contains('active') : Boolean(force);
+  menu.classList.toggle('active', shouldOpen);
+  if (button) button.setAttribute('aria-expanded', String(shouldOpen));
+}
+
 function operatorUser() {
   if (!api.hasAuthToken()) return null;
   try {

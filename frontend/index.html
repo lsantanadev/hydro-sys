@@ -145,7 +145,8 @@
       <button class="btn btn-ghost" id="map-public-back" type="button" onclick="goTo('landing')">Voltar</button>
       <button class="btn btn-ghost" id="map-operator-back" type="button" onclick="goTo('admin')" hidden><span data-icon="dashboard"></span>Voltar ao painel</button>
       <div class="brand map-brand"><img class="brand-wordmark compact" src="assets/hydrosys-logo.png" alt="HydroSys" /><span class="module-label">Mapa operacional</span></div>
-      <div class="map-actions">
+      <button class="menu-toggle map-menu-toggle" id="map-menu-toggle" type="button" onclick="toggleMapMenu()" aria-label="Abrir controles do mapa" aria-controls="map-actions" aria-expanded="false"><span data-icon="menu"></span></button>
+      <div class="map-actions" id="map-actions">
         <select id="fb" onchange="applyFilters()" aria-label="Filtrar bairro"></select>
         <select id="fs" onchange="applyFilters()" aria-label="Filtrar status">
           <option value="">Todos os status</option>

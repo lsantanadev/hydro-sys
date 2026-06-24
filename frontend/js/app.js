@@ -10,7 +10,7 @@ import {
   openResidentSettings,
 } from './auth.js';
 import { goTo, initNavigation, showTab, toggleMenu } from './navigation.js';
-import { initMap, applyFilters, toggleCrit } from './map.js';
+import { initMap, applyFilters, toggleCrit, toggleMapMenu } from './map.js';
 import {
   renderDashboard,
   simulateRise,
@@ -69,6 +69,7 @@ Object.assign(window, {
   initMap,
   applyFilters,
   toggleCrit,
+  toggleMapMenu,
   simulateRise,
   applyPrototypeReading,
   changePrototypeLevel,
