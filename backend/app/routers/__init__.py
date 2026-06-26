@@ -15,6 +15,8 @@ from app.schemas import (
     LoginRequest,
     LoginResponse,
     LatestReadingOut,
+    MapSensorOut,
+    MapShelterOut,
     ManualOccurrenceClose,
     ManualOccurrenceCreate,
     ManualOccurrenceOut,
@@ -435,16 +437,27 @@ def latest_reading(sensor_id: int, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/map/sensors", response_model=list[SensorOut])
+@router.get("/map/sensors", response_model=list[MapSensorOut])
 def map_sensors(db: Session = Depends(get_db)):
     sensors = db.scalars(select(Sensor).where(Sensor.active.is_(True)).order_by(Sensor.id)).all()
-    return [serialize_sensor(sensor, latest_sensor_reading(db, sensor.id)) for sensor in sensors]
+    return sensors
 
 
-@router.get("/map/shelters", response_model=list[ShelterOut])
+@router.get("/map/shelters", response_model=list[MapShelterOut])
 def map_shelters(db: Session = Depends(get_db)):
     shelters = db.scalars(select(Shelter).where(Shelter.active.is_(True)).order_by(Shelter.id)).all()
-    return shelters
+    return [
+        MapShelterOut(
+            id=shelter.id,
+            name=shelter.name,
+            latitude=shelter.latitude,
+            longitude=shelter.longitude,
+            capacity=shelter.capacity,
+            occupancy=shelter.occupancy,
+            available_spots=max(0, shelter.capacity - shelter.occupancy),
+        )
+        for shelter in shelters
+    ]
 
 
 @router.post(
