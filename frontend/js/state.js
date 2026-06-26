@@ -4,6 +4,7 @@ export const uiState = {
   page: 'landing',
   adminTab: 'dashboard',
   critOnly: false,
+  selectedSensorId: null,
   selectedSensorCode: null,
 };
 
@@ -87,6 +88,7 @@ function normalizeSensor(sensor) {
     status: sensor.active ? 'online' : 'offline',
     reading: formatDate(sensor.last_reading_at),
     lastReadingDiscarded: sensor.last_reading_is_valid === false,
+    lastReadingSimulated: sensor.last_reading_origin === 'SIMULACAO',
     lastDiscardedAt: formatDate(sensor.last_discarded_at),
     ly,
     ll,

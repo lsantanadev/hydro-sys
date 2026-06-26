@@ -23,6 +23,7 @@ export async function renderSensors() {
             <span><small>Nivel atual</small><strong class="reading">${sensor.level} cm</strong></span>
             <span><small>Ultima leitura</small><strong>${escapeHtml(sensor.reading)}</strong></span>
           </div>
+          ${sensor.lastReadingSimulated ? '<span class="reading-simulated">Ultima leitura simulada</span>' : ''}
           ${sensor.lastReadingDiscarded ? '<span class="reading-discarded">Ultima leitura descartada pelo filtro</span>' : ''}
           <div class="meter"><span style="width:${pct}%"></span></div>
           <div class="sensor-thresholds" aria-label="Limiares configurados">
