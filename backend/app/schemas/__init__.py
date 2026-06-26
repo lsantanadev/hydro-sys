@@ -77,6 +77,7 @@ class SensorOut(BaseModel):
     active: bool
     last_reading_at: datetime | None
     last_reading_is_valid: bool | None = None
+    last_reading_origin: str | None = None
     last_discarded_at: datetime | None = None
     created_at: datetime
 
