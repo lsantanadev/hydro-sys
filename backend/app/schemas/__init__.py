@@ -76,13 +76,17 @@ class SensorOut(BaseModel):
     current_status: str
     active: bool
     last_reading_at: datetime | None
+    last_reading_is_valid: bool | None = None
+    last_discarded_at: datetime | None = None
     created_at: datetime
 
 
 class ReadingCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     sensor_code: str = Field(min_length=1, max_length=50)
     water_level_cm: float
-    origin: str = Field(default="ESP32", max_length=30)
+    origin: str = Field(min_length=1, max_length=30)
 
 
 class ReadingOut(BaseModel):
@@ -93,6 +97,12 @@ class ReadingOut(BaseModel):
     origin: str
     is_valid: bool
     created_at: datetime
+
+
+class LatestReadingOut(BaseModel):
+    reading: ReadingOut | None
+    latest_received_reading: ReadingOut | None
+    latest_reading_discarded: bool
 
 
 class ResidentCreate(BaseModel):

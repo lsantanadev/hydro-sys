@@ -14,6 +14,7 @@ from app.schemas import (
     AuthUserOut,
     LoginRequest,
     LoginResponse,
+    LatestReadingOut,
     ManualOccurrenceClose,
     ManualOccurrenceCreate,
     ManualOccurrenceOut,
@@ -64,6 +65,8 @@ def reading_payload(payload: ReadingCreate) -> tuple[str, float, str]:
     origin = payload.origin.strip().upper()
     if not sensor_code:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="sensor_code é obrigatório.")
+    if not origin:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="origin é obrigatório.")
     if level is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="water_level_cm é obrigatório.")
     try:
@@ -75,8 +78,12 @@ def reading_payload(payload: ReadingCreate) -> tuple[str, float, str]:
     return sensor_code, parsed_level, origin
 
 
-def serialize_sensor(sensor: Sensor) -> SensorOut:
-    return SensorOut.model_validate(sensor)
+def serialize_sensor(sensor: Sensor, last_reading: SensorReading | None = None) -> SensorOut:
+    sensor_out = SensorOut.model_validate(sensor)
+    if last_reading:
+        sensor_out.last_reading_is_valid = bool(last_reading.is_valid)
+        sensor_out.last_discarded_at = last_reading.created_at if not last_reading.is_valid else None
+    return sensor_out
 
 
 def serialize_reading(reading: SensorReading, sensor: Sensor) -> ReadingOut:
@@ -119,7 +126,7 @@ def has_open_manual_occurrence(db: Session, sensor_id: int) -> bool:
     ) is not None
 
 
-def reading_is_valid(db: Session, sensor_id: int, level: float) -> bool:
+def reading_filter_result(db: Session, sensor_id: int, level: float) -> dict:
     previous_levels = db.scalars(
         select(SensorReading.water_level_cm)
         .where(
@@ -130,11 +137,28 @@ def reading_is_valid(db: Session, sensor_id: int, level: float) -> bool:
         .limit(3)
     ).all()
     if len(previous_levels) < 3:
-        return True
-    average = sum(float(value) for value in previous_levels) / 3
+        return {
+            "is_valid": True,
+            "previous_count": len(previous_levels),
+            "average": None,
+            "variation_percent": None,
+        }
+    previous_values = [float(value) for value in previous_levels]
+    average = sum(previous_values) / 3
     if average <= 0:
-        return True
-    return abs(level - average) / average <= 0.5
+        return {
+            "is_valid": True,
+            "previous_count": len(previous_values),
+            "average": round(average, 2),
+            "variation_percent": None,
+        }
+    variation_percent = abs(level - average) / average
+    return {
+        "is_valid": variation_percent <= 0.5,
+        "previous_count": len(previous_values),
+        "average": round(average, 2),
+        "variation_percent": round(variation_percent * 100, 2),
+    }
 
 
 def latest_valid_reading(db: Session, sensor_id: int) -> SensorReading | None:
@@ -144,6 +168,15 @@ def latest_valid_reading(db: Session, sensor_id: int) -> SensorReading | None:
             SensorReading.sensor_id == sensor_id,
             SensorReading.is_valid.is_(True),
         )
+        .order_by(SensorReading.created_at.desc(), SensorReading.id.desc())
+        .limit(1)
+    )
+
+
+def latest_sensor_reading(db: Session, sensor_id: int) -> SensorReading | None:
+    return db.scalar(
+        select(SensorReading)
+        .where(SensorReading.sensor_id == sensor_id)
         .order_by(SensorReading.created_at.desc(), SensorReading.id.desc())
         .limit(1)
     )
@@ -255,7 +288,7 @@ def create_sensor(payload: SensorCreate, db: Session = Depends(get_db), operator
 @router.get("/sensors", response_model=list[SensorOut])
 def list_sensors(db: Session = Depends(get_db)):
     sensors = db.scalars(select(Sensor).order_by(Sensor.id)).all()
-    return [serialize_sensor(sensor) for sensor in sensors]
+    return [serialize_sensor(sensor, latest_sensor_reading(db, sensor.id)) for sensor in sensors]
 
 
 @router.put("/sensors/{sensor_id}", response_model=SensorOut)
@@ -340,8 +373,9 @@ def _receive_reading(payload: ReadingCreate, db: Session) -> ReadingOut:
     if not sensor.active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sensor inativo.")
     old_status = sensor.current_status
+    filter_result = reading_filter_result(db, sensor.id, level)
+    is_valid = filter_result["is_valid"]
     new_status = status_by_level(sensor, level)
-    is_valid = reading_is_valid(db, sensor.id, level)
     now = datetime.now(timezone.utc)
     reading = SensorReading(
         sensor_id=sensor.id,
@@ -372,26 +406,39 @@ def _receive_reading(payload: ReadingCreate, db: Session) -> ReadingOut:
         audit(
             db,
             origin,
-            "LEITURA_SENSOR_DESCARTADA",
+            "LEITURA_DESCARTADA",
             sensor.sensor_code,
-            f"{level} cm - variação superior a 50% da média das últimas 3 leituras validas",
+            audit_payload(
+                {
+                    "water_level_cm": level,
+                    "media_ultimas_3_validas": filter_result["average"],
+                    "variacao_percentual": filter_result["variation_percent"],
+                    "limite_percentual": 50,
+                    "leituras_validas_consideradas": filter_result["previous_count"],
+                }
+            ),
         )
     db.commit()
     db.refresh(reading)
     return serialize_reading(reading, sensor)
 
 
-@router.get("/sensors/{sensor_id}/latest-reading")
+@router.get("/sensors/{sensor_id}/latest-reading", response_model=LatestReadingOut)
 def latest_reading(sensor_id: int, db: Session = Depends(get_db)):
     sensor = sensor_or_404(db, sensor_id)
     reading = latest_valid_reading(db, sensor.id)
-    return {"reading": serialize_reading(reading, sensor).model_dump(mode="json") if reading else None}
+    latest_received_reading = latest_sensor_reading(db, sensor.id)
+    return LatestReadingOut(
+        reading=serialize_reading(reading, sensor) if reading else None,
+        latest_received_reading=serialize_reading(latest_received_reading, sensor) if latest_received_reading else None,
+        latest_reading_discarded=bool(latest_received_reading and not latest_received_reading.is_valid),
+    )
 
 
 @router.get("/map/sensors", response_model=list[SensorOut])
 def map_sensors(db: Session = Depends(get_db)):
     sensors = db.scalars(select(Sensor).where(Sensor.active.is_(True)).order_by(Sensor.id)).all()
-    return [serialize_sensor(sensor) for sensor in sensors]
+    return [serialize_sensor(sensor, latest_sensor_reading(db, sensor.id)) for sensor in sensors]
 
 
 @router.get("/map/shelters", response_model=list[ShelterOut])

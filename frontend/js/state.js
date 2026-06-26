@@ -86,6 +86,8 @@ function normalizeSensor(sensor) {
     st: sensor.current_status || 'verde',
     status: sensor.active ? 'online' : 'offline',
     reading: formatDate(sensor.last_reading_at),
+    lastReadingDiscarded: sensor.last_reading_is_valid === false,
+    lastDiscardedAt: formatDate(sensor.last_discarded_at),
     ly,
     ll,
     lr,

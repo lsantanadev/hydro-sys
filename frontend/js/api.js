@@ -86,6 +86,9 @@ export const api = {
   deleteSensor(id) {
     return request(`/sensors/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
+  latestSensorReading(id) {
+    return request(`/sensors/${encodeURIComponent(id)}/latest-reading`);
+  },
   mapSensors() {
     return request('/map/sensors');
   },

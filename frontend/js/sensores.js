@@ -19,14 +19,17 @@ export async function renderSensors() {
           <div class="card-top"><strong>${escapeHtml(sensor.id)}</strong><span class="badge ${sensor.st}">${sensor.st}</span></div>
           <h3>${escapeHtml(sensor.nome)}</h3>
           <p>${escapeHtml(sensor.endereco)}</p>
-          <strong class="reading">${sensor.level} cm</strong>
+          <div class="sensor-reading-meta" aria-label="Leitura atual do sensor">
+            <span><small>Nivel atual</small><strong class="reading">${sensor.level} cm</strong></span>
+            <span><small>Ultima leitura</small><strong>${escapeHtml(sensor.reading)}</strong></span>
+          </div>
+          ${sensor.lastReadingDiscarded ? '<span class="reading-discarded">Ultima leitura descartada pelo filtro</span>' : ''}
           <div class="meter"><span style="width:${pct}%"></span></div>
           <div class="sensor-thresholds" aria-label="Limiares configurados">
             <span><small>Amarelo</small><strong>${sensor.ly} cm</strong></span>
             <span><small>Laranja</small><strong>${sensor.ll} cm</strong></span>
             <span><small>Vermelho</small><strong>${sensor.lr} cm</strong></span>
           </div>
-          <small>Última leitura: ${sensor.reading}</small>
           <small>Conexao: ${sensor.status}</small>
           <button class="btn btn-ghost full" type="button" onclick="openEditSensorModal(${sensor.apiId})"><span data-icon="settings"></span>Editar sensor</button>
         </article>

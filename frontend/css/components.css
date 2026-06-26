@@ -451,6 +451,45 @@
 .reading { color: var(--primary); font-family: var(--mono); }
 .meter { height: 7px; margin: 10px 0 8px; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
 .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--gradient); transition: width .35s ease; }
+.sensor-reading-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+.sensor-reading-meta span {
+  min-width: 0;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.sensor-reading-meta small {
+  display: block;
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.sensor-reading-meta strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.reading-discarded {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px 0 8px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #fed7aa;
+  background: rgba(251, 146, 60, .13);
+  border: 1px solid rgba(251, 146, 60, .28);
+  font-size: 11px;
+  line-height: 1.25;
+}
 .sensor-thresholds {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

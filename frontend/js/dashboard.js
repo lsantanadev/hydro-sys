@@ -26,7 +26,8 @@ export async function renderDashboard() {
   setText('kv-or', sensors.filter(s => s.st === 'laranja').length);
   setText('kv-se', sensors.filter(s => s.status === 'online').length);
   setText('kv-co', '-');
-  renderPrototypeController(sensors, data.error);
+  const prototypeReading = await loadPrototypeLatestReading(sensors);
+  renderPrototypeController(sensors, data.error, prototypeReading);
 
   const list = document.getElementById('sensor-summary');
   if (list) {
@@ -43,14 +44,14 @@ export async function renderDashboard() {
   }
 }
 
-function renderPrototypeController(sensors, error = '') {
+function renderPrototypeController(sensors, error = '', latestReading = null) {
   const root = document.getElementById('prototype-controller');
   if (!root) return;
   if (!sensors.length) {
     root.innerHTML = `<p>${escapeHtml(error || 'Cadastre um sensor para enviar leituras reais ou simuladas.')}</p>`;
     return;
   }
-  const sensor = findSelectedSensor(sensors);
+  const sensor = withLatestReading(findSelectedSensor(sensors), latestReading);
   const pct = Math.min(100, Math.round((sensor.level / sensor.max) * 100));
   root.innerHTML = `
     <article class="prototype-reading ${sensor.st}">
@@ -70,6 +71,7 @@ function renderPrototypeController(sensors, error = '') {
         </select>
       </label>
       <div class="prototype-value"><strong>${sensor.level}</strong><span>cm</span><small>Ultima leitura: ${sensor.reading}</small></div>
+      ${sensor.lastReadingDiscarded ? '<span class="reading-discarded">Ultima leitura descartada pelo filtro</span>' : ''}
       <div class="meter"><span style="width:${pct}%"></span></div>
       <div class="prototype-thresholds">
         <span>Atenção ${sensor.ly} cm</span>
@@ -178,6 +180,44 @@ function findSelectedSensor(sensors) {
   const current = sensors.find(sensor => sensor.id === uiState.selectedSensorCode) || sensors[0];
   uiState.selectedSensorCode = current.id;
   return current;
+}
+
+async function loadPrototypeLatestReading(sensors) {
+  const sensor = findSelectedSensor(sensors);
+  if (!sensor) return null;
+  try {
+    const payload = await api.latestSensorReading(sensor.apiId);
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function withLatestReading(sensor, latestInfo) {
+  if (!sensor || !latestInfo) return sensor;
+  const latestValidReading = latestInfo.reading || null;
+  const latestReceivedReading = latestInfo.latest_received_reading || latestValidReading;
+  const lastReadingDiscarded = Boolean(
+    latestInfo.latest_reading_discarded || latestReceivedReading?.is_valid === false
+  );
+  const nextSensor = {
+    ...sensor,
+    lastReadingDiscarded,
+    reading: formatReadingTime(latestReceivedReading?.created_at || latestValidReading?.created_at),
+  };
+  const level = Number(latestValidReading?.water_level_cm);
+  if (!Number.isFinite(level)) return nextSensor;
+  nextSensor.level = level;
+  nextSensor.max = Math.max(20, Math.ceil(Math.max(level, sensor.lr) * 1.25));
+  nextSensor.st = latestValidReading.status_generated || sensor.st;
+  return nextSensor;
+}
+
+function formatReadingTime(value) {
+  if (!value) return 'Sem leitura';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Sem leitura';
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function validateReading(sensor, parsedLevel) {
