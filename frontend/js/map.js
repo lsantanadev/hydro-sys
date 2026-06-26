@@ -1,10 +1,17 @@
 import { CONFIG } from './config.js';
 import { api } from './api.js';
-import { uiState, loadSensors, loadShelters } from './state.js';
+import { uiState, loadMapSensors, loadShelters, normalizeTextKey } from './state.js';
 import { icon, hydrateIcons } from './icons.js';
+
+const MAP_SENSOR_POLL_INTERVAL_MS = 5000;
 
 let lmap = null;
 let markers = [];
+let mapSensorPolling = null;
+let cachedSensors = [];
+let cachedShelters = [];
+let cachedError = '';
+let lastSensorSignature = '';
 
 export function renderMapSession() {
   const publicBack = document.getElementById('map-public-back');
@@ -56,15 +63,17 @@ function initials(name) {
 }
 
 function color(status) {
-  return {
+  const markerColors = {
     verde: '#34d399',
     amarelo: '#facc15',
     laranja: '#fb923c',
     vermelho: '#fb7185',
-  }[status] || '#38bdf8';
+  };
+  return markerColors[status] || markerColors.verde;
 }
 
 export function initMap() {
+  startMapSensorPolling();
   if (lmap || typeof L === 'undefined') {
     renderMap();
     return;
@@ -85,10 +94,19 @@ export async function renderMap() {
   let shelters = [];
   let error = '';
   try {
-    [sensors, shelters] = await Promise.all([loadSensors(), loadShelters()]);
+    [sensors, shelters] = await Promise.all([loadMapSensors(), loadShelters()]);
   } catch (err) {
     error = err.message;
   }
+  cachedSensors = sensors;
+  cachedShelters = shelters;
+  cachedError = error;
+  lastSensorSignature = sensorSignature(sensors);
+  renderMapLayers(cachedSensors, cachedShelters, cachedError);
+}
+
+function renderMapLayers(sensors = cachedSensors, shelters = cachedShelters, error = cachedError) {
+  renderMapSession();
   renderMapSide(sensors, shelters, error);
   if (!lmap) {
     const el = document.getElementById('lmap');
@@ -100,17 +118,17 @@ export async function renderMap() {
   markers.forEach(marker => marker.remove());
   markers = [];
   visibleSensors(sensors).forEach(sensor => {
+    const markerColor = color(sensor.st);
     const markerIcon = L.divIcon({
       className: '',
-      html: `<div style="width:18px;height:18px;border-radius:50%;background:${color(sensor.st)};border:3px solid rgba(255,255,255,.42);box-shadow:0 0 0 8px ${color(sensor.st)}22"></div>`,
+      html: `<div style="width:18px;height:18px;border-radius:50%;background:${markerColor};border:3px solid rgba(255,255,255,.42);box-shadow:0 0 0 8px ${markerColor}22"></div>`,
       iconSize: [18, 18],
       iconAnchor: [9, 9],
     });
     markers.push(L.marker([sensor.lat, sensor.lng], { icon: markerIcon }).addTo(lmap).bindPopup(`
       <strong>${escapeHtml(sensor.nome)}</strong><br>
-      ${escapeHtml(sensor.endereco)}<br>
-      Nível: ${sensor.level} cm<br>
-      Status: ${sensor.st}
+      Nivel atual: ${sensor.level} cm<br>
+      Status: ${escapeHtml(sensor.st)}
     `));
   });
   shelters.filter(sh => sh.st !== 'fechado').forEach(shelter => {
@@ -122,18 +140,52 @@ export async function renderMap() {
     });
     markers.push(L.marker([shelter.lat, shelter.lng], { icon: shelterIcon }).addTo(lmap).bindPopup(`
       <strong>${escapeHtml(shelter.nome)}</strong><br>
-      Vagas: ${Math.max(0, shelter.cap - shelter.occ)}
+      Vagas disponiveis: ${shelter.vagas}
     `));
   });
   lmap.invalidateSize();
 }
 
+function startMapSensorPolling() {
+  if (mapSensorPolling) return;
+  mapSensorPolling = setInterval(pollMapSensors, MAP_SENSOR_POLL_INTERVAL_MS);
+}
+
+async function pollMapSensors() {
+  if (uiState.page !== 'map') return;
+  try {
+    const sensors = await loadMapSensors();
+    const nextSignature = sensorSignature(sensors);
+    if (nextSignature === lastSensorSignature) return;
+    cachedSensors = sensors;
+    cachedError = '';
+    lastSensorSignature = nextSignature;
+    renderMapLayers(cachedSensors, cachedShelters, cachedError);
+  } catch (err) {
+    cachedError = err.message;
+    renderMapSide(cachedSensors, cachedShelters, cachedError);
+  }
+}
+
+function sensorSignature(sensors = []) {
+  return JSON.stringify(sensors.map(sensor => ({
+    id: sensor.apiId,
+    status: sensor.st,
+    level: sensor.level,
+    lastReading: sensor.reading,
+    lat: sensor.lat,
+    lng: sensor.lng,
+    name: sensor.nome,
+    neighborhood: sensor.bairroKey,
+  })));
+}
+
 export function visibleSensors(sensors = []) {
-  const bairro = document.getElementById('fb')?.value || '';
-  const status = document.getElementById('fs')?.value || '';
+  const bairro = normalizeTextKey(document.getElementById('fb')?.value || '');
+  const status = normalizeTextKey(document.getElementById('fs')?.value || '');
   return sensors.filter(sensor => {
     if (uiState.critOnly && !['laranja', 'vermelho'].includes(sensor.st)) return false;
-    if (bairro && sensor.bairro !== bairro) return false;
+    if (bairro && sensor.bairroKey !== bairro) return false;
     if (status && sensor.st !== status) return false;
     return true;
   });
@@ -156,7 +208,7 @@ export function renderMapSide(sensors = [], shelters = [], error = '') {
       <article class="side-item">
         <div class="card-top"><h4>${escapeHtml(shelter.nome)}</h4><span class="badge ${shelter.st === 'fechado' ? 'warning' : 'good'}">${shelter.st}</span></div>
         <p>${escapeHtml(shelter.endereco)}</p>
-        <small>${Math.max(0, shelter.cap - shelter.occ)} vagas livres</small>
+        <small>${shelter.vagas} vagas livres</small>
       </article>
     `).join('') || `<p>${escapeHtml(error || 'Nenhum abrigo cadastrado.')}</p>`;
   }
@@ -164,13 +216,15 @@ export function renderMapSide(sensors = [], shelters = [], error = '') {
 }
 
 export function applyFilters() {
-  renderMap();
+  renderMapLayers(cachedSensors, cachedShelters, cachedError);
 }
 
 export function toggleCrit() {
   uiState.critOnly = !uiState.critOnly;
-  document.getElementById('btncrit')?.classList.toggle('btn-secondary', uiState.critOnly);
-  renderMap();
+  const button = document.getElementById('btncrit');
+  button?.classList.toggle('btn-secondary', uiState.critOnly);
+  button?.setAttribute('aria-pressed', String(uiState.critOnly));
+  renderMapLayers(cachedSensors, cachedShelters, cachedError);
 }
 
 function escapeHtml(text) {
