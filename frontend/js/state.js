@@ -32,6 +32,11 @@ export async function loadSensors() {
   return sensors.map(normalizeSensor);
 }
 
+export async function loadMapSensors() {
+  const sensors = await api.mapSensors();
+  return sensors.map(normalizeMapSensor);
+}
+
 export async function loadShelters() {
   const shelters = await api.mapShelters();
   return shelters.map(normalizeShelter);
@@ -94,17 +99,60 @@ function normalizeSensor(sensor) {
   };
 }
 
+function normalizeMapSensor(sensor) {
+  const level = Number(sensor.current_level || 0);
+  const status = normalizeSensorStatus(sensor.current_status);
+  const neighborhood = sensor.neighborhood || '';
+  return {
+    apiId: sensor.id,
+    id: String(sensor.id),
+    nome: sensor.name,
+    bairro: neighborhood,
+    bairroKey: normalizeTextKey(neighborhood),
+    endereco: neighborhood ? `Bairro ${neighborhood}` : 'Localizacao cadastrada',
+    lat: Number(sensor.latitude),
+    lng: Number(sensor.longitude),
+    level,
+    max: Math.max(20, Math.ceil(level * 1.25)),
+    st: status,
+    status: 'online',
+    reading: formatDate(sensor.last_reading_at),
+  };
+}
+
+function normalizeSensorStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  return ['verde', 'amarelo', 'laranja', 'vermelho'].includes(normalized) ? normalized : 'verde';
+}
+
+export function normalizeTextKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
 function normalizeShelter(shelter) {
+  const capacity = Number(shelter.capacity || 0);
+  const occupancy = Number(shelter.occupancy || 0);
+  const latitude = Number(shelter.latitude);
+  const longitude = Number(shelter.longitude);
   return {
     id: shelter.id,
     nome: shelter.name,
-    endereco: shelter.address || 'Endereço não informado',
-    lat: Number(shelter.latitude),
-    lng: Number(shelter.longitude),
-    cap: Number(shelter.capacity || 0),
-    occ: Number(shelter.occupancy || 0),
-    st: shelter.active ? 'aberto' : 'fechado',
-    donations: shelter.donations || [],
+    endereco: Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+      : 'Localizacao cadastrada',
+    lat: latitude,
+    lng: longitude,
+    cap: capacity,
+    occ: occupancy,
+    vagas: Number.isFinite(Number(shelter.available_spots))
+      ? Number(shelter.available_spots)
+      : Math.max(0, capacity - occupancy),
+    st: 'aberto',
+    donations: [],
   };
 }
 
