@@ -84,6 +84,7 @@ def serialize_sensor(sensor: Sensor, last_reading: SensorReading | None = None) 
     sensor_out = SensorOut.model_validate(sensor)
     if last_reading:
         sensor_out.last_reading_is_valid = bool(last_reading.is_valid)
+        sensor_out.last_reading_origin = last_reading.origin
         sensor_out.last_discarded_at = last_reading.created_at if not last_reading.is_valid else None
     return sensor_out
 
@@ -395,7 +396,8 @@ def _receive_reading(payload: ReadingCreate, db: Session) -> ReadingOut:
     db.add(reading)
     db.flush()
     if is_valid:
-        audit(db, origin, "LEITURA_SENSOR_RECEBIDA", sensor.sensor_code, f"{level} cm - {new_status}")
+        audit_action = "LEITURA_SIMULADA" if origin == "SIMULACAO" else "LEITURA_SENSOR_RECEBIDA"
+        audit(db, origin, audit_action, sensor.sensor_code, f"{level} cm - {new_status}")
         if old_status != sensor.current_status:
             audit(
                 db,
