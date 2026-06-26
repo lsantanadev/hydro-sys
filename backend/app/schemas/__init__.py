@@ -105,6 +105,29 @@ class LatestReadingOut(BaseModel):
     latest_reading_discarded: bool
 
 
+class MapSensorOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    neighborhood: str | None
+    latitude: float
+    longitude: float
+    current_level: float
+    current_status: str
+    last_reading_at: datetime | None
+
+
+class MapShelterOut(BaseModel):
+    id: int
+    name: str
+    latitude: float
+    longitude: float
+    capacity: int
+    occupancy: int
+    available_spots: int
+
+
 class ResidentCreate(BaseModel):
     name: str | None = None
     nome: str | None = None
