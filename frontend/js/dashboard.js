@@ -67,10 +67,11 @@ function renderPrototypeController(sensors, error = '', latestReading = null) {
       </div>
       <label class="field"><span>Sensor</span>
         <select id="prototype-sensor-select" onchange="selectPrototypeSensor(this.value)">
-          ${sensors.map(item => `<option value="${item.id}" ${item.id === sensor.id ? 'selected' : ''}>${escapeHtml(item.id)} - ${escapeHtml(item.nome)}</option>`).join('')}
+          ${sensors.map(item => `<option value="${item.apiId}" ${item.apiId === sensor.apiId ? 'selected' : ''}>${escapeHtml(item.id)} - ${escapeHtml(item.nome)}</option>`).join('')}
         </select>
       </label>
       <div class="prototype-value"><strong>${sensor.level}</strong><span>cm</span><small>Ultima leitura: ${sensor.reading}</small></div>
+      ${sensor.lastReadingSimulated ? '<span class="reading-simulated">Ultima leitura simulada</span>' : ''}
       ${sensor.lastReadingDiscarded ? '<span class="reading-discarded">Ultima leitura descartada pelo filtro</span>' : ''}
       <div class="meter"><span style="width:${pct}%"></span></div>
       <div class="prototype-thresholds">
@@ -79,8 +80,8 @@ function renderPrototypeController(sensors, error = '', latestReading = null) {
         <span>Emergência ${sensor.lr} cm</span>
       </div>
       <div class="prototype-entry">
-        <label class="field"><span>Leitura simulada (cm)</span><input id="prototype-level-input" type="number" min="0" max="${sensor.max}" step="0.1" value="${sensor.level}"></label>
-        <button class="btn btn-primary" type="button" onclick="applyPrototypeReading()"><span data-icon="activity"></span>Enviar leitura</button>
+        <label class="field"><span>Leitura simulada (cm)</span><input id="prototype-level-input" type="number" min="0" step="0.1" value="${sensor.level}"></label>
+        <button class="btn btn-primary" type="button" onclick="applyPrototypeReading()"><span data-icon="activity"></span>Enviar leitura simulada</button>
       </div>
       <div class="prototype-actions">
         <button class="btn btn-secondary" type="button" onclick="changePrototypeLevel(4)">Aumentar +4 cm</button>
@@ -92,8 +93,8 @@ function renderPrototypeController(sensors, error = '', latestReading = null) {
   hydrateIcons(root);
 }
 
-export function selectPrototypeSensor(sensorCode) {
-  uiState.selectedSensorCode = sensorCode;
+export function selectPrototypeSensor(sensorId) {
+  uiState.selectedSensorId = Number(sensorId);
   renderDashboard();
 }
 
@@ -177,7 +178,8 @@ async function loadDashboardData() {
 
 function findSelectedSensor(sensors) {
   if (!sensors.length) return null;
-  const current = sensors.find(sensor => sensor.id === uiState.selectedSensorCode) || sensors[0];
+  const current = sensors.find(sensor => sensor.apiId === uiState.selectedSensorId) || sensors[0];
+  uiState.selectedSensorId = current.apiId;
   uiState.selectedSensorCode = current.id;
   return current;
 }
@@ -200,9 +202,11 @@ function withLatestReading(sensor, latestInfo) {
   const lastReadingDiscarded = Boolean(
     latestInfo.latest_reading_discarded || latestReceivedReading?.is_valid === false
   );
+  const lastReadingSimulated = (latestReceivedReading?.origin || latestValidReading?.origin) === 'SIMULACAO';
   const nextSensor = {
     ...sensor,
     lastReadingDiscarded,
+    lastReadingSimulated,
     reading: formatReadingTime(latestReceivedReading?.created_at || latestValidReading?.created_at),
   };
   const level = Number(latestValidReading?.water_level_cm);
@@ -223,10 +227,6 @@ function formatReadingTime(value) {
 function validateReading(sensor, parsedLevel) {
   if (!Number.isFinite(parsedLevel) || parsedLevel < 0) {
     toast('Informe um nivel valido em centimetros.');
-    return false;
-  }
-  if (parsedLevel > sensor.max) {
-    toast(`O limite exibido para ${sensor.id} e ${sensor.max} cm.`);
     return false;
   }
   return true;
