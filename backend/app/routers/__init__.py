@@ -566,21 +566,14 @@ def close_manual_occurrence(
 
 @router.post("/residents", response_model=ResidentOut, status_code=status.HTTP_201_CREATED)
 def create_resident(payload: ResidentCreate, db: Session = Depends(get_db)):
-    consent = payload.consent if payload.consent is not None else payload.consentimento
-    if consent is not True:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Consentimento LGPD obrigatério.")
-    name = (payload.name or payload.nome or "").strip()
-    whatsapp = (payload.whatsapp or payload.telefone or "").strip()
-    neighborhood = (payload.neighborhood or payload.bairro or "").strip()
-    street = (payload.street or payload.rua or "").strip()
-    if not all([name, whatsapp, payload.email, neighborhood, street]):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Preencha nome, WhatsApp, e-mail, bairro e rua.")
+    if payload.consent is not True:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Consentimento LGPD obrigatorio.")
     resident = Resident(
-        name=name,
-        whatsapp=whatsapp,
-        email=payload.email.strip().lower(),
-        neighborhood=neighborhood,
-        street=street,
+        name=payload.name,
+        whatsapp=payload.whatsapp,
+        email=payload.email,
+        neighborhood=payload.neighborhood,
+        street=payload.street,
         consent_at=datetime.now(timezone.utc),
     )
     db.add(resident)
