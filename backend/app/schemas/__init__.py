@@ -185,9 +185,12 @@ class LoginResponse(BaseModel):
 
 
 class ManualOccurrenceCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     sensor_id: int | None = None
     sensor_code: str | None = None
     reason: str = Field(min_length=1)
+    operator: str | None = Field(default=None, min_length=1, max_length=120)
     actor: str = Field(default="operador", min_length=1, max_length=120)
 
 
@@ -204,6 +207,7 @@ class ManualOccurrenceOut(BaseModel):
     status: str
     reason: str
     operator: str
+    active: bool
     closed_at: datetime | None
     closed_by: str | None
     created_at: datetime

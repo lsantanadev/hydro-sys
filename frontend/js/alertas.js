@@ -10,15 +10,36 @@ export async function renderAlerts() {
   const body = document.getElementById('al-tbody');
   if (!body) return;
   try {
-    const alerts = getActiveAlerts(await loadSensors());
+    const [sensors, occurrences] = await Promise.all([
+      loadSensors(),
+      api.manualOccurrences(),
+    ]);
+    const activeOccurrences = occurrences.filter(occurrence => occurrence.active);
+    const sensorsById = new Map(sensors.map(sensor => [sensor.apiId, sensor]));
+    const activeOccurrenceSensorIds = new Set(activeOccurrences.map(occurrence => occurrence.sensor_id));
+    const manualAlerts = activeOccurrences.map(occurrence => {
+      const sensor = sensorsById.get(occurrence.sensor_id);
+      return {
+        id: `occurrence-${occurrence.id}`,
+        regiao: sensor?.bairro || 'Não informado',
+        status: occurrence.status || 'vermelho',
+        level: sensor ? `${sensor.level} cm` : '-',
+        sensor: occurrence.sensor_code,
+        origem: `ocorrencia manual - ${occurrence.reason}`,
+        action: `<button class="btn btn-danger" type="button" onclick="closeManualOccurrence(${occurrence.id})">Encerrar ocorrência</button>`,
+      };
+    });
+    const automaticAlerts = getActiveAlerts(sensors.filter(sensor => !activeOccurrenceSensorIds.has(sensor.apiId)))
+      .map(alert => ({ ...alert, level: `${alert.level} cm`, action: '-' }));
+    const alerts = [...manualAlerts, ...automaticAlerts];
     body.innerHTML = alerts.map(alert => `
       <tr>
         <td>${escapeHtml(alert.regiao)}</td>
         <td><span class="badge ${alert.status}">${alert.status}</span></td>
-        <td>${alert.level} cm</td>
+        <td>${escapeHtml(alert.level)}</td>
         <td>${escapeHtml(alert.sensor)}</td>
         <td>${escapeHtml(alert.origem)}</td>
-        <td>-</td>
+        <td>${alert.action}</td>
       </tr>
     `).join('') || '<tr><td colspan="6">Nenhum alerta ativo.</td></tr>';
   } catch (error) {
@@ -58,29 +79,46 @@ export async function openManualModal() {
     <p>A ocorrência manual coloca o ponto selecionado em status vermelho.</p>
     <label class="field"><span>Ponto monitorado</span>
       <select id="manual-sensor">
-        ${sensors.map(sensor => `<option value="${sensor.id}">${escapeHtml(sensor.id)} - ${escapeHtml(sensor.nome)}</option>`).join('')}
+        ${sensors.map(sensor => `<option value="${sensor.apiId}">${escapeHtml(sensor.id)} - ${escapeHtml(sensor.nome)}</option>`).join('')}
       </select>
     </label>
     <label class="field"><span>Justificativa</span><input id="manual-reason" placeholder="Equipe confirmou transbordamento"></label>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-danger" onclick="saveManualOccurrence()">Registrar</button>
+      <button class="btn btn-danger" id="manual-submit" onclick="saveManualOccurrence()">Registrar</button>
     </div>
   `);
 }
 
 export async function saveManualOccurrence() {
-  const sensorCode = document.getElementById('manual-sensor')?.value || '';
+  const sensorId = Number(document.getElementById('manual-sensor')?.value || '');
   const reason = document.getElementById('manual-reason')?.value.trim() || '';
-  if (!sensorCode || !reason) {
+  if (!sensorId || !reason) {
     toast('Selecione o sensor e informe a justificativa.');
     return;
   }
+  const button = document.getElementById('manual-submit');
+  if (button) button.disabled = true;
   try {
-    await api.createManualOccurrence({ sensor_code: sensorCode, reason });
+    await api.createManualOccurrence({
+      sensor_id: sensorId,
+      reason,
+      operator: operatorName(),
+    });
     closeModal();
     await refreshOperationalViews();
     toast('Ocorrencia manual registrada.');
+  } catch (error) {
+    toast(error.message);
+    if (button) button.disabled = false;
+  }
+}
+
+export async function closeManualOccurrence(id) {
+  try {
+    await api.closeManualOccurrence(id);
+    await refreshOperationalViews();
+    toast('Ocorrencia encerrada.');
   } catch (error) {
     toast(error.message);
   }
@@ -102,4 +140,13 @@ function escapeHtml(text) {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
+}
+
+function operatorName() {
+  try {
+    const user = JSON.parse(localStorage.getItem('hydrosys_operator_user') || '{}');
+    return user.name || user.email || 'Operador';
+  } catch {
+    return 'Operador';
+  }
 }

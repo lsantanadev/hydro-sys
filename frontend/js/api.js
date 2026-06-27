@@ -107,6 +107,12 @@ export const api = {
   createManualOccurrence(payload) {
     return request('/manual-occurrences', jsonOptions(payload, { method: 'POST' }));
   },
+  manualOccurrences() {
+    return request('/manual-occurrences');
+  },
+  closeManualOccurrence(id) {
+    return request(`/manual-occurrences/${encodeURIComponent(id)}/close`, jsonOptions({}, { method: 'POST' }));
+  },
   sendSensorReading(sensorCode, value, source) {
     return request('/sensors/readings', jsonOptions({
       sensor_code: sensorCode,
