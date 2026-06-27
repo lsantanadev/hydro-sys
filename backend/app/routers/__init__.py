@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import json
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -30,7 +29,7 @@ from app.schemas import (
     ShelterOut,
 )
 from app.security import create_access_token, decode_access_token, verify_password
-from app.services import audit
+from app.services import log_audit
 
 
 router = APIRouter(prefix="/api")
@@ -186,10 +185,6 @@ def latest_sensor_reading(db: Session, sensor_id: int) -> SensorReading | None:
     )
 
 
-def audit_payload(payload: dict) -> str:
-    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
-
-
 def operator_out(user: AppUser) -> AuthUserOut:
     return AuthUserOut(
         id=user.id,
@@ -245,7 +240,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(payload.password, user.password_hash):
         raise unauthorized_login()
     user.last_login_at = datetime.now(timezone.utc)
-    audit(db, user.email, "LOGIN_OPERADOR", "auth")
+    log_audit(db, user.email, "LOGIN_OPERADOR", "auth")
     db.commit()
     return LoginResponse(
         access_token=create_access_token(str(user.id), user.role),
@@ -283,7 +278,7 @@ def create_sensor(payload: SensorCreate, db: Session = Depends(get_db), operator
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe sensor com este código.") from None
-    audit(db, operator.email, "SENSOR_CRIADO", sensor.sensor_code, sensor.name)
+    log_audit(db, operator.email, "SENSOR_CADASTRADO", sensor.sensor_code, sensor.name)
     db.commit()
     db.refresh(sensor)
     return serialize_sensor(sensor)
@@ -335,20 +330,18 @@ def update_sensor(
     for field, value in data.items():
         setattr(sensor, field, value)
     sensor.current_status = status_by_level(sensor, float(sensor.current_level))
-    audit(db, operator.email, "SENSOR_ATUALIZADO", sensor.sensor_code, audit_payload(data))
+    log_audit(db, operator.email, "SENSOR_EDITADO", sensor.sensor_code, data)
     if threshold_changes:
-        audit(
+        log_audit(
             db,
             operator.email,
             "LIMIARES_ALTERADOS",
             sensor.sensor_code,
-            audit_payload(
-                {
-                    "alterados": threshold_changes,
-                    "antes": previous_thresholds,
-                    "depois": new_thresholds,
-                }
-            ),
+            {
+                "alterados": threshold_changes,
+                "antes": previous_thresholds,
+                "depois": new_thresholds,
+            },
         )
     db.commit()
     db.refresh(sensor)
@@ -361,7 +354,7 @@ def deactivate_sensor(sensor_id: int, db: Session = Depends(get_db), operator: A
     if not sensor.active:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     sensor.active = False
-    audit(db, operator.email, "SENSOR_DESATIVADO", sensor.sensor_code)
+    log_audit(db, operator.email, "SENSOR_DESATIVADO", sensor.sensor_code)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -397,31 +390,29 @@ def _receive_reading(payload: ReadingCreate, db: Session) -> ReadingOut:
     db.add(reading)
     db.flush()
     if is_valid:
-        audit_action = "LEITURA_SIMULADA" if origin == "SIMULACAO" else "LEITURA_SENSOR_RECEBIDA"
-        audit(db, origin, audit_action, sensor.sensor_code, f"{level} cm - {new_status}")
+        audit_action = "LEITURA_SIMULADA" if origin == "SIMULACAO" else "LEITURA_SENSOR"
+        log_audit(db, origin, audit_action, sensor.sensor_code, f"{level} cm - {new_status}")
         if old_status != sensor.current_status:
-            audit(
+            log_audit(
                 db,
                 "sistema",
-                "STATUS_SENSOR_ALTERADO",
+                "STATUS_ALTERADO",
                 sensor.sensor_code,
                 f"{old_status} para {sensor.current_status}",
             )
     else:
-        audit(
+        log_audit(
             db,
             origin,
             "LEITURA_DESCARTADA",
             sensor.sensor_code,
-            audit_payload(
-                {
-                    "water_level_cm": level,
-                    "media_ultimas_3_validas": filter_result["average"],
-                    "variacao_percentual": filter_result["variation_percent"],
-                    "limite_percentual": 50,
-                    "leituras_validas_consideradas": filter_result["previous_count"],
-                }
-            ),
+            {
+                "water_level_cm": level,
+                "media_ultimas_3_validas": filter_result["average"],
+                "variacao_percentual": filter_result["variation_percent"],
+                "limite_percentual": 50,
+                "leituras_validas_consideradas": filter_result["previous_count"],
+            },
         )
     db.commit()
     db.refresh(reading)
@@ -515,7 +506,7 @@ def create_manual_occurrence(
     sensor.current_status = "vermelho"
     db.add(occurrence)
     db.flush()
-    audit(db, actor, "OCORRENCIA_MANUAL_CRIADA", sensor.sensor_code, occurrence.reason)
+    log_audit(db, actor, "OCORRENCIA_CRIADA", sensor.sensor_code, occurrence.reason)
     db.commit()
     db.refresh(occurrence)
     return serialize_manual_occurrence(occurrence, sensor)
@@ -561,7 +552,7 @@ def close_manual_occurrence(
         sensor.current_level = 0
         sensor.current_status = "verde"
 
-    audit(
+    log_audit(
         db,
         actor,
         "OCORRENCIA_ENCERRADA",
@@ -594,7 +585,7 @@ def create_resident(payload: ResidentCreate, db: Session = Depends(get_db)):
     )
     db.add(resident)
     db.flush()
-    audit(db, "morador", "MORADOR_CADASTRADO", str(resident.id), resident.email)
+    log_audit(db, "morador", "MORADOR_CADASTRADO", str(resident.id), resident.email)
     db.commit()
     db.refresh(resident)
     return resident
@@ -607,7 +598,11 @@ def list_residents(db: Session = Depends(get_db), operator: AppUser = Depends(re
 
 @router.get("/audit", response_model=list[AuditOut])
 def list_audit(db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
-    events = db.scalars(select(AuditEvent).order_by(AuditEvent.id.desc()).limit(250)).all()
+    events = db.scalars(
+        select(AuditEvent)
+        .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+        .limit(250)
+    ).all()
     return [
         AuditOut(
             id=event.id,
