@@ -23,7 +23,7 @@ export async function renderAudit() {
 export async function exportAuditReport() {
   try {
     const audit = await loadAudit();
-    const headers = ['Hora', 'Usuário', 'Ação', 'Entidade', 'Detalhes'];
+    const headers = ['Data e hora', 'Ator', 'Ação', 'Entidade', 'Detalhes'];
     const rows = audit.map(item => [
       item.hora,
       item.usuario,
