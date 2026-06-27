@@ -112,6 +112,7 @@ def serialize_manual_occurrence(
         status=occurrence.status,
         reason=occurrence.reason,
         operator=occurrence.operator,
+        active=occurrence.closed_at is None,
         closed_at=occurrence.closed_at,
         closed_by=occurrence.closed_by,
         created_at=occurrence.created_at,
@@ -462,6 +463,27 @@ def map_shelters(db: Session = Depends(get_db)):
     ]
 
 
+@router.get("/manual-occurrences", response_model=list[ManualOccurrenceOut])
+def list_manual_occurrences(db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
+    occurrences = db.scalars(
+        select(ManualOccurrence)
+        .order_by(ManualOccurrence.closed_at.is_not(None), ManualOccurrence.created_at.desc())
+    ).all()
+    if not occurrences:
+        return []
+    sensors = {
+        sensor.id: sensor
+        for sensor in db.scalars(
+            select(Sensor).where(Sensor.id.in_([occurrence.sensor_id for occurrence in occurrences]))
+        ).all()
+    }
+    return [
+        serialize_manual_occurrence(occurrence, sensors[occurrence.sensor_id])
+        for occurrence in occurrences
+        if occurrence.sensor_id in sensors
+    ]
+
+
 @router.post(
     "/manual-occurrences",
     response_model=ManualOccurrenceOut,
@@ -499,13 +521,17 @@ def create_manual_occurrence(
     return serialize_manual_occurrence(occurrence, sensor)
 
 
+@router.post(
+    "/manual-occurrences/{occurrence_id}/close",
+    response_model=ManualOccurrenceOut,
+)
 @router.put(
     "/manual-occurrences/{occurrence_id}/close",
     response_model=ManualOccurrenceOut,
 )
 def close_manual_occurrence(
     occurrence_id: int,
-    payload: ManualOccurrenceClose,
+    payload: ManualOccurrenceClose | None = None,
     db: Session = Depends(get_db),
     operator: AppUser = Depends(require_operator),
 ):
@@ -538,7 +564,7 @@ def close_manual_occurrence(
     audit(
         db,
         actor,
-        "OCORRENCIA_MANUAL_ENCERRADA",
+        "OCORRENCIA_ENCERRADA",
         sensor.sensor_code,
         f"Status restaurado para {sensor.current_status}",
     )
