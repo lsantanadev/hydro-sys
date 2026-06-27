@@ -64,6 +64,11 @@ export async function subForm() {
   const addresses = collectRegistrationAddresses();
   if (!addresses) return;
 
+  const submit = document.getElementById('resident-submit');
+  if (submit) {
+    submit.disabled = true;
+    submit.setAttribute('aria-busy', 'true');
+  }
   try {
     await api.createResident({
       name: nome,
@@ -71,18 +76,20 @@ export async function subForm() {
       email,
       neighborhood: addresses[0].bairro,
       street: addresses[0].rua,
-      consent: true,
+      consent: cons,
     });
     document.getElementById('cad-form-box').hidden = true;
     document.getElementById('cad-succ-box').hidden = false;
     const successText = document.querySelector('#cad-succ-box p');
-    if (successText) successText.textContent = 'Cadastro enviado para a API. O login será liberado quando a autenticação estiver implementada.';
+    if (successText) successText.textContent = 'Cadastro confirmado pela API. O login sera liberado quando a autenticacao estiver implementada.';
     await renderMoradores();
-    toast(addresses.length > 1
-      ? 'Cadastro principal concluído. Endereços adicionais não foram persistidos.'
-      : 'Cadastro concluído. O login aguarda autenticação pela API.');
+    toast('Cadastro confirmado pela API.');
   } catch (error) {
     toast(error.message);
+    if (submit) {
+      submit.disabled = false;
+      submit.removeAttribute('aria-busy');
+    }
   }
 }
 

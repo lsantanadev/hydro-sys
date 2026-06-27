@@ -129,13 +129,13 @@
         <div class="extra-addresses span-2" id="cad-extra-addresses"></div>
         <label class="consent span-2"><input id="fcons" type="checkbox" /> <span>Concordo com uso dos dados para alertas conforme LGPD.</span></label>
       </div>
-      <button class="btn btn-primary full" type="button" onclick="subForm()"><span data-icon="check"></span>Cadastrar</button>
+      <button class="btn btn-primary full" id="resident-submit" type="button" onclick="subForm()"><span data-icon="check"></span>Cadastrar</button>
       <button class="btn btn-ghost full" type="button" onclick="goTo('landing')">Voltar para o início</button>
     </div>
     <div class="form-card success-card" id="cad-succ-box" hidden>
       <span data-icon="check-circle"></span>
-      <h2>Cadastro demonstrativo concluído</h2>
-      <p>A conta visual de morador foi criada para navegação nesta versão técnica.</p>
+      <h2>Cadastro enviado</h2>
+      <p>Cadastro confirmado pela API.</p>
       <button class="btn btn-primary" type="button" onclick="goTo('map')">Mostrar conta no mapa</button>
     </div>
   </section>
