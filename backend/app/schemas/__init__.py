@@ -130,17 +130,32 @@ class MapShelterOut(BaseModel):
 
 
 class ResidentCreate(BaseModel):
-    name: str | None = None
-    nome: str | None = None
-    whatsapp: str | None = None
-    telefone: str | None = None
-    email: str
-    neighborhood: str | None = None
-    bairro: str | None = None
-    street: str | None = None
-    rua: str | None = None
-    consent: bool | None = None
-    consentimento: bool | None = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=120)
+    whatsapp: str = Field(min_length=8, max_length=30)
+    email: str = Field(min_length=3, max_length=160)
+    neighborhood: str = Field(min_length=1, max_length=120)
+    street: str = Field(min_length=1, max_length=200)
+    consent: bool
+
+    @field_validator("whatsapp")
+    @classmethod
+    def validate_whatsapp(cls, value: str):
+        digits = re.sub(r"\D", "", value)
+        if digits.startswith("55") and len(digits) in (12, 13):
+            digits = digits[2:]
+        if not re.fullmatch(r"[1-9][0-9](?:9[0-9]{8}|[2-9][0-9]{7})", digits):
+            raise ValueError("Informe um WhatsApp brasileiro com DDD. Exemplo: (48) 99999-9999.")
+        return value
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str):
+        value = value.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
+            raise ValueError("Informe um e-mail valido.")
+        return value
 
 
 class ResidentOut(BaseModel):
