@@ -160,7 +160,7 @@ function normalizeShelter(shelter) {
 
 function normalizeAudit(event) {
   return {
-    hora: formatDate(event.created_at || event.data_hora),
+    hora: formatAuditDate(event.created_at || event.data_hora),
     usuario: event.actor || event.usuario || 'sistema',
     acao: event.action || event.acao || '-',
     entidade: event.entity || event.entidade || '-',
@@ -193,4 +193,17 @@ function formatDetails(details) {
 function formatDate(value) {
   if (!value) return 'Sem leitura';
   return new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatAuditDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
