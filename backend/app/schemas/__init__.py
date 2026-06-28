@@ -191,6 +191,8 @@ class LoginRequest(BaseModel):
     @classmethod
     def normalize_role(cls, value: str):
         role = value.strip().upper()
+        if role == "OPERADOR":
+            return "OPERATOR"
         if role not in {"OPERATOR", "MORADOR"}:
             raise ValueError("Perfil de login invalido.")
         return role
