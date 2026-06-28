@@ -74,7 +74,10 @@ export const api = {
   },
   currentUser() {
     try {
-      return JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+      const current = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+      if (current.role) return current;
+      const legacyOperator = JSON.parse(localStorage.getItem('hydrosys_operator_user') || '{}');
+      return legacyOperator.email ? { ...legacyOperator, role: 'OPERATOR' } : {};
     } catch {
       return {};
     }
