@@ -14,17 +14,18 @@ let sensorPolling = null;
 export async function renderDashboard() {
   const data = await loadDashboardData();
   const sensors = data.sensors;
+  const activeSensors = sensors.filter(sensor => sensor.status === 'online');
   const shelters = data.shelters;
-  const residents = data.residents;
-  const alerts = getActiveAlerts(sensors);
+  const residentCount = data.residentCount || 0;
+  const alerts = getActiveAlerts(activeSensors);
 
-  setText('stat-sensors', sensors.length);
+  setText('stat-sensors', activeSensors.length);
   setText('stat-alerts', alerts.length);
   setText('stat-shelters', shelters.filter(s => s.st !== 'fechado').length);
-  setText('stat-residents', residents.length);
-  setText('kv-al', sensors.filter(s => s.st === 'vermelho').length);
-  setText('kv-or', sensors.filter(s => s.st === 'laranja').length);
-  setText('kv-se', sensors.filter(s => s.status === 'online').length);
+  setText('stat-residents', residentCount);
+  setText('kv-al', activeSensors.filter(s => s.st === 'vermelho').length);
+  setText('kv-or', activeSensors.filter(s => s.st === 'laranja').length);
+  setText('kv-se', activeSensors.length);
   setText('kv-co', '-');
   const prototypeReading = await loadPrototypeLatestReading(sensors);
   renderPrototypeController(sensors, data.error, prototypeReading);
@@ -172,7 +173,7 @@ async function loadDashboardData() {
   try {
     return { ...(await loadOperationalData()), error: '' };
   } catch (error) {
-    return { sensors: [], shelters: [], audit: [], residents: [], error: error.message };
+    return { sensors: [], shelters: [], audit: [], residentCount: 0, error: error.message };
   }
 }
 

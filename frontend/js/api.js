@@ -121,6 +121,9 @@ export const api = {
   residents() {
     return request('/residents');
   },
+  residentCount() {
+    return request('/residents/count');
+  },
   createResident(payload) {
     return request('/residents', jsonOptions(payload, { method: 'POST' }));
   },

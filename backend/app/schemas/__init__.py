@@ -172,6 +172,10 @@ class ResidentOut(BaseModel):
     created_at: datetime
 
 
+class ResidentCountOut(BaseModel):
+    count: int
+
+
 class LoginRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 

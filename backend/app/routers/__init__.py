@@ -21,6 +21,7 @@ from app.schemas import (
     ManualOccurrenceOut,
     ReadingCreate,
     ReadingOut,
+    ResidentCountOut,
     ResidentCreate,
     ResidentOut,
     SensorCreate,
@@ -609,6 +610,11 @@ def create_resident(payload: ResidentCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(resident)
     return resident
+
+
+@router.get("/residents/count", response_model=ResidentCountOut)
+def count_residents(db: Session = Depends(get_db)):
+    return ResidentCountOut(count=db.scalar(select(func.count(Resident.id))) or 0)
 
 
 @router.get("/residents", response_model=list[ResidentOut])

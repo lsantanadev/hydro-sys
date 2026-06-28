@@ -9,14 +9,14 @@ export const uiState = {
 };
 
 export async function loadOperationalData() {
-  const [sensors, shelters, audit, residents] = await Promise.allSettled([
+  const [sensors, shelters, audit, residentCount] = await Promise.allSettled([
     loadSensors(),
     loadShelters(),
     loadAudit(),
-    loadResidents(),
+    loadResidentCount(),
   ]);
 
-  if ([sensors, shelters, audit, residents].every(result => result.status === 'rejected')) {
+  if ([sensors, shelters, audit, residentCount].every(result => result.status === 'rejected')) {
     throw sensors.reason || new Error('API indisponível.');
   }
 
@@ -24,7 +24,7 @@ export async function loadOperationalData() {
     sensors: settledValue(sensors),
     shelters: settledValue(shelters),
     audit: settledValue(audit),
-    residents: settledValue(residents),
+    residentCount: settledValue(residentCount, 0),
   };
 }
 
@@ -51,6 +51,11 @@ export async function loadAudit() {
 export async function loadResidents() {
   const residents = await api.residents();
   return residents.map(normalizeResident);
+}
+
+export async function loadResidentCount() {
+  const payload = await api.residentCount();
+  return Number(payload.count || 0);
 }
 
 export function getActiveAlerts(sensors = []) {
@@ -180,8 +185,8 @@ function normalizeResident(resident) {
   };
 }
 
-function settledValue(result) {
-  return result.status === 'fulfilled' ? result.value : [];
+function settledValue(result, fallback = []) {
+  return result.status === 'fulfilled' ? result.value : fallback;
 }
 
 function formatDetails(details) {
