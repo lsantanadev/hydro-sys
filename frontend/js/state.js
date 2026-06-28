@@ -148,9 +148,7 @@ function normalizeShelter(shelter) {
   return {
     id: shelter.id,
     nome: shelter.name,
-    endereco: Number.isFinite(latitude) && Number.isFinite(longitude)
-      ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
-      : 'Localizacao cadastrada',
+    endereco: shelter.address || 'Endereco nao informado',
     lat: latitude,
     lng: longitude,
     cap: capacity,

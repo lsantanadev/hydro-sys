@@ -122,6 +122,7 @@ class MapSensorOut(BaseModel):
 class MapShelterOut(BaseModel):
     id: int
     name: str
+    address: str | None = None
     latitude: float
     longitude: float
     capacity: int
@@ -258,6 +259,7 @@ class ShelterOut(BaseModel):
 
     id: int
     name: str
+    address: str | None
     latitude: float
     longitude: float
     capacity: int

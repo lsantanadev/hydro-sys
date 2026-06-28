@@ -465,6 +465,7 @@ def map_shelters(db: Session = Depends(get_db)):
         MapShelterOut(
             id=shelter.id,
             name=shelter.name,
+            address=shelter.address,
             latitude=shelter.latitude,
             longitude=shelter.longitude,
             capacity=shelter.capacity,

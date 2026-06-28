@@ -138,6 +138,7 @@ function renderMapLayers(sensors = cachedSensors, shelters = cachedShelters, err
     });
     markers.push(L.marker([shelter.lat, shelter.lng], { icon: shelterIcon }).addTo(lmap).bindPopup(`
       <strong>${escapeHtml(shelter.nome)}</strong><br>
+      ${escapeHtml(shelter.endereco)}<br>
       Vagas disponiveis: ${shelter.vagas}
     `));
   });
