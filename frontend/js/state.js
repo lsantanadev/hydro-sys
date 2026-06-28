@@ -145,6 +145,9 @@ function normalizeShelter(shelter) {
   const occupancy = Number(shelter.occupancy || 0);
   const latitude = Number(shelter.latitude);
   const longitude = Number(shelter.longitude);
+  const availableSpots = Number.isFinite(Number(shelter.available_spots))
+    ? Number(shelter.available_spots)
+    : Math.max(0, capacity - occupancy);
   return {
     id: shelter.id,
     nome: shelter.name,
@@ -153,10 +156,8 @@ function normalizeShelter(shelter) {
     lng: longitude,
     cap: capacity,
     occ: occupancy,
-    vagas: Number.isFinite(Number(shelter.available_spots))
-      ? Number(shelter.available_spots)
-      : Math.max(0, capacity - occupancy),
-    st: 'aberto',
+    vagas: availableSpots,
+    st: capacity > 0 && availableSpots <= 0 ? 'lotado' : 'aberto',
     donations: [],
   };
 }

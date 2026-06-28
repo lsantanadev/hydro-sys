@@ -8,7 +8,7 @@ export async function renderShelters() {
     const shelters = await loadShelters();
     root.innerHTML = shelters.map(shelter => {
       const pct = shelter.cap ? Math.round((shelter.occ / shelter.cap) * 100) : 0;
-      const badgeClass = shelter.st === 'fechado' ? 'warning' : 'good';
+      const badgeClass = shelter.st === 'lotado' ? 'warning' : 'good';
       return `
         <article class="shelter-card">
           <div class="card-top"><strong>${escapeHtml(shelter.nome)}</strong><span class="badge ${badgeClass}">${shelter.st}</span></div>

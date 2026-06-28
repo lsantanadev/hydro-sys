@@ -129,7 +129,7 @@ function renderMapLayers(sensors = cachedSensors, shelters = cachedShelters, err
       Status: ${escapeHtml(sensor.st)}
     `));
   });
-  shelters.filter(sh => sh.st !== 'fechado').forEach(shelter => {
+  shelters.forEach(shelter => {
     const shelterIcon = L.divIcon({
       className: '',
       html: `<div style="width:24px;height:24px;border-radius:8px;background:#111d31;border:2px solid #38bdf8;color:#38bdf8;display:grid;place-items:center">${icon('shelter')}</div>`,
@@ -205,7 +205,7 @@ export function renderMapSide(sensors = [], shelters = [], error = '') {
   if (sheltersRoot) {
     sheltersRoot.innerHTML = shelters.map(shelter => `
       <article class="side-item">
-        <div class="card-top"><h4>${escapeHtml(shelter.nome)}</h4><span class="badge ${shelter.st === 'fechado' ? 'warning' : 'good'}">${shelter.st}</span></div>
+        <div class="card-top"><h4>${escapeHtml(shelter.nome)}</h4><span class="badge ${shelter.st === 'lotado' ? 'warning' : 'good'}">${shelter.st}</span></div>
         <p>${escapeHtml(shelter.endereco)}</p>
         <small>${shelter.vagas} vagas livres</small>
       </article>
