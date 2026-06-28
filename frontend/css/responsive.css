@@ -10,8 +10,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    justify-self: end;
     width: 42px;
     height: 42px;
+    margin-left: auto;
     color: var(--text);
     background: rgba(255, 255, 255, .045);
     border: 1px solid var(--border);
@@ -51,8 +53,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    justify-self: end;
     width: 42px;
     height: 42px;
+    margin-left: auto;
     color: var(--text);
     background: rgba(255, 255, 255, .045);
     border: 1px solid var(--border);
