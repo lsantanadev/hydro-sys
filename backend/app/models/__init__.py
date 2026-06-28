@@ -49,6 +49,7 @@ class Resident(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     whatsapp: Mapped[str] = mapped_column(String(30), nullable=False)
     email: Mapped[str] = mapped_column(String(160), nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255))
     neighborhood: Mapped[str] = mapped_column(String(120), nullable=False)
     street: Mapped[str] = mapped_column(String(200), nullable=False)
     consent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

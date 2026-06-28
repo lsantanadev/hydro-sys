@@ -11,43 +11,35 @@ export function initSelects() {
   if (cadastro) cadastro.innerHTML = bairroOptions();
   const filtro = document.getElementById('fb');
   if (filtro) filtro.innerHTML = `<option value="">Todos os bairros</option>${CONFIG.bairros.map(bairro => `<option value="${bairro}">${bairro}</option>`).join('')}`;
-  const senhaCadastro = document.getElementById('fsenha');
-  if (senhaCadastro) {
-    senhaCadastro.value = '';
-    senhaCadastro.disabled = true;
-    senhaCadastro.placeholder = 'Login de morador ainda indisponível';
-  }
 }
 
 export async function doLogin() {
   const perfil = document.getElementById('lperfil')?.value || 'MORADOR';
-  const nomePerfil = perfil === 'OPERADOR' ? 'operador' : 'morador';
-  if (perfil !== 'OPERADOR') {
-    toast(`O login de ${nomePerfil} aguardara autenticacao pela API.`);
-    return;
-  }
   const email = value('le').toLowerCase();
   const password = document.getElementById('lp')?.value || '';
   if (!email || !password) {
-    toast('Informe e-mail e senha do operador.');
+    toast('Informe e-mail e senha para entrar.');
     return;
   }
   try {
-    const session = await api.login(email, password);
-    api.setAuthToken(session.access_token);
-    localStorage.setItem('hydrosys_operator_user', JSON.stringify(session.user));
-    toast('Operador autenticado.');
-    goTo('admin');
+    const session = await api.login(email, password, perfil);
+    api.setAuthSession(session.access_token, session.user);
+    if (session.user.role === 'OPERATOR') {
+      localStorage.setItem('hydrosys_operator_user', JSON.stringify(session.user));
+      toast('Operador autenticado.');
+      goTo('admin');
+      return;
+    }
+    toast('Morador autenticado.');
+    goTo('map');
   } catch (error) {
     api.clearAuthToken();
-    localStorage.removeItem('hydrosys_operator_user');
     toast(error.message);
   }
 }
 
 export function fazerLogout() {
   api.clearAuthToken();
-  localStorage.removeItem('hydrosys_operator_user');
   toast('Sessao encerrada.');
   goTo('landing');
 }
@@ -56,9 +48,11 @@ export async function subForm() {
   const nome = value('fn');
   const telefone = value('fw');
   const email = value('fem').toLowerCase();
+  const password = document.getElementById('fsenha')?.value || '';
   const cons = document.getElementById('fcons')?.checked;
   if (!nome) return toast('Informe o nome do morador.');
   if (!telefone || !email) return toast('Informe telefone e e-mail para continuar.');
+  if (password.length < 8) return toast('Informe uma senha com pelo menos 8 caracteres.');
   if (!cons) return toast('Aceite o termo LGPD para continuar.');
 
   const addresses = collectRegistrationAddresses();
@@ -74,6 +68,7 @@ export async function subForm() {
       name: nome,
       whatsapp: telefone,
       email,
+      password,
       neighborhood: addresses[0].bairro,
       street: addresses[0].rua,
       consent: cons,
@@ -81,7 +76,8 @@ export async function subForm() {
     document.getElementById('cad-form-box').hidden = true;
     document.getElementById('cad-succ-box').hidden = false;
     const successText = document.querySelector('#cad-succ-box p');
-    if (successText) successText.textContent = 'Cadastro confirmado pela API. O login sera liberado quando a autenticacao estiver implementada.';
+    if (successText) successText.textContent = 'Cadastro confirmado pela API. Use e-mail e senha para entrar como morador.';
+    prepareResidentLogin(email);
     await renderMoradores();
     toast('Cadastro confirmado pela API.');
   } catch (error) {
@@ -140,12 +136,21 @@ export function removeCadastroEndereco(id) {
 
 export function openResidentSettings() {
   openModal(`
-    <h3>Configurações da conta</h3>
-    <p class="danger-note">As configurações do morador aguardam autenticação pela API. Nenhum endereço será salvo localmente.</p>
+    <h3>Configuracoes da conta</h3>
+    <p class="danger-note">As configuracoes do morador ainda nao possuem edicao nesta versao.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" type="button" onclick="closeModal()">Fechar</button>
     </div>
   `);
+}
+
+function prepareResidentLogin(email) {
+  const profile = document.getElementById('lperfil');
+  const loginEmail = document.getElementById('le');
+  const loginPassword = document.getElementById('lp');
+  if (profile) profile.value = 'MORADOR';
+  if (loginEmail) loginEmail.value = email;
+  if (loginPassword) loginPassword.value = '';
 }
 
 function collectRegistrationAddresses() {

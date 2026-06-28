@@ -116,7 +116,7 @@
         <label class="field span-2"><span>Nome completo</span><input id="fn" placeholder="Maria da Silva" /></label>
         <label class="field"><span>WhatsApp</span><input id="fw" placeholder="(48) 99999-9999" /></label>
         <label class="field"><span>E-mail</span><input id="fem" type="email" placeholder="maria@email.com" /></label>
-        <label class="field"><span>Senha</span><input id="fsenha" type="password" placeholder="Mínimo 6 caracteres" /></label>
+        <label class="field"><span>Senha</span><input id="fsenha" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" /></label>
         <div class="address-section-head span-2">
           <h3>Endereço principal</h3>
           <button class="btn btn-secondary" type="button" onclick="addCadastroEndereco()"><span data-icon="map-pin"></span>Adicionar outro endereço</button>
@@ -136,7 +136,7 @@
       <span data-icon="check-circle"></span>
       <h2>Cadastro enviado</h2>
       <p>Cadastro confirmado pela API.</p>
-      <button class="btn btn-primary" type="button" onclick="goTo('map')">Mostrar conta no mapa</button>
+      <button class="btn btn-primary" type="button" onclick="goTo('login')">Entrar com cadastro</button>
     </div>
   </section>
 

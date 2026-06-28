@@ -135,6 +135,7 @@ class ResidentCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     whatsapp: str = Field(min_length=8, max_length=30)
     email: str = Field(min_length=3, max_length=160)
+    password: str = Field(min_length=8, max_length=255)
     neighborhood: str = Field(min_length=1, max_length=120)
     street: str = Field(min_length=1, max_length=200)
     consent: bool
@@ -176,6 +177,7 @@ class LoginRequest(BaseModel):
 
     email: str = Field(min_length=3, max_length=160)
     password: str = Field(min_length=1, max_length=255)
+    role: str = Field(default="OPERATOR", min_length=1, max_length=30)
 
     @field_validator("email")
     @classmethod
@@ -184,6 +186,14 @@ class LoginRequest(BaseModel):
         if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
             raise ValueError("Informe um e-mail valido.")
         return value
+
+    @field_validator("role")
+    @classmethod
+    def normalize_role(cls, value: str):
+        role = value.strip().upper()
+        if role not in {"OPERATOR", "MORADOR"}:
+            raise ValueError("Perfil de login invalido.")
+        return role
 
 
 class AuthUserOut(BaseModel):

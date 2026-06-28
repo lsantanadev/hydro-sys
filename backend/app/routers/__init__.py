@@ -28,7 +28,7 @@ from app.schemas import (
     SensorUpdate,
     ShelterOut,
 )
-from app.security import create_access_token, decode_access_token, verify_password
+from app.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.services import log_audit
 
 
@@ -194,6 +194,15 @@ def operator_out(user: AppUser) -> AuthUserOut:
     )
 
 
+def resident_out(resident: Resident) -> AuthUserOut:
+    return AuthUserOut(
+        id=resident.id,
+        name=resident.name,
+        email=resident.email,
+        role="MORADOR",
+    )
+
+
 def unauthorized_login() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -230,6 +239,17 @@ def health(db: Session = Depends(get_db)):
 
 @router.post("/auth/login", response_model=LoginResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    if payload.role == "MORADOR":
+        resident = db.scalar(select(Resident).where(func.lower(Resident.email) == payload.email))
+        if not resident or not resident.password_hash or not verify_password(payload.password, resident.password_hash):
+            raise unauthorized_login()
+        log_audit(db, resident.email, "LOGIN_MORADOR", "auth")
+        db.commit()
+        return LoginResponse(
+            access_token=create_access_token(str(resident.id), "MORADOR"),
+            user=resident_out(resident),
+        )
+
     user = db.scalar(
         select(AppUser).where(
             func.lower(AppUser.email) == payload.email,
@@ -568,16 +588,23 @@ def close_manual_occurrence(
 def create_resident(payload: ResidentCreate, db: Session = Depends(get_db)):
     if payload.consent is not True:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Consentimento LGPD obrigatorio.")
+    if db.scalar(select(Resident.id).where(func.lower(Resident.email) == payload.email)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ja existe cadastro com este e-mail.")
     resident = Resident(
         name=payload.name,
         whatsapp=payload.whatsapp,
         email=payload.email,
+        password_hash=hash_password(payload.password),
         neighborhood=payload.neighborhood,
         street=payload.street,
         consent_at=datetime.now(timezone.utc),
     )
     db.add(resident)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ja existe cadastro com este e-mail.") from None
     log_audit(db, "morador", "MORADOR_CADASTRADO", str(resident.id), resident.email)
     db.commit()
     db.refresh(resident)

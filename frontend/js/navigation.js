@@ -58,7 +58,7 @@ export function initNavigation() {
 
 export function goTo(page, options = {}) {
   let redirectedToLogin = false;
-  if (page === 'admin' && !api.hasAuthToken()) {
+  if (page === 'admin' && !api.hasOperatorSession()) {
     toast('Entre como operador para acessar o painel.');
     page = 'login';
     redirectedToLogin = true;

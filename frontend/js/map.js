@@ -20,14 +20,16 @@ export function renderMapSession() {
   const residentSettings = document.getElementById('map-resident-settings');
   const userInitialsRoot = document.getElementById('map-user-initials');
   const userNameRoot = document.getElementById('map-user-name');
-  const operatorSession = operatorUser();
+  const session = sessionUser();
+  const isOperator = session?.role === 'OPERATOR';
+  const isResident = session?.role === 'MORADOR';
 
-  if (publicBack) publicBack.hidden = Boolean(operatorSession);
-  if (operatorBack) operatorBack.hidden = !operatorSession;
-  if (sessionControls) sessionControls.hidden = !operatorSession;
-  if (residentSettings) residentSettings.hidden = true;
-  if (userInitialsRoot) userInitialsRoot.textContent = operatorSession?.initials || '';
-  if (userNameRoot) userNameRoot.textContent = operatorSession?.name || '';
+  if (publicBack) publicBack.hidden = Boolean(session);
+  if (operatorBack) operatorBack.hidden = !isOperator;
+  if (sessionControls) sessionControls.hidden = !session;
+  if (residentSettings) residentSettings.hidden = !isResident;
+  if (userInitialsRoot) userInitialsRoot.textContent = session?.initials || '';
+  if (userNameRoot) userNameRoot.textContent = session?.name || '';
 }
 
 export function toggleMapMenu(force = null) {
@@ -39,21 +41,17 @@ export function toggleMapMenu(force = null) {
   if (button) button.setAttribute('aria-expanded', String(shouldOpen));
 }
 
-function operatorUser() {
+function sessionUser() {
   if (!api.hasAuthToken()) return null;
-  try {
-    const user = JSON.parse(localStorage.getItem('hydrosys_operator_user') || '{}');
-    const name = user.name || user.email || 'Operador';
-    return {
-      name,
-      initials: initials(name),
-    };
-  } catch {
-    return {
-      name: 'Operador',
-      initials: 'OP',
-    };
-  }
+  const user = api.currentUser();
+  const name = user.name || user.email || 'Usuario';
+  const role = user.role || '';
+  if (!role) return null;
+  return {
+    name,
+    role,
+    initials: initials(name),
+  };
 }
 
 function initials(name) {
