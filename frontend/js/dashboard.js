@@ -10,6 +10,7 @@ import { CONFIG } from './config.js';
 
 let apiConnection = 'verificando';
 let sensorPolling = null;
+let forcePrototypeRender = false;
 
 export async function renderDashboard() {
   const data = await loadDashboardData();
@@ -28,7 +29,9 @@ export async function renderDashboard() {
   setText('kv-se', activeSensors.length);
   setText('kv-co', '-');
   const prototypeReading = await loadPrototypeLatestReading(sensors);
-  renderPrototypeController(sensors, data.error, prototypeReading);
+  const shouldForcePrototypeRender = forcePrototypeRender;
+  forcePrototypeRender = false;
+  renderPrototypeController(sensors, data.error, prototypeReading, shouldForcePrototypeRender);
 
   const list = document.getElementById('sensor-summary');
   if (list) {
@@ -45,13 +48,20 @@ export async function renderDashboard() {
   }
 }
 
-function renderPrototypeController(sensors, error = '', latestReading = null) {
+function renderPrototypeController(sensors, error = '', latestReading = null, forceRender = false) {
   const root = document.getElementById('prototype-controller');
   if (!root) return;
   if (!sensors.length) {
     root.innerHTML = `<p>${escapeHtml(error || 'Cadastre um sensor para enviar leituras reais ou simuladas.')}</p>`;
     return;
   }
+  const activeElement = document.activeElement;
+  const isInteractingWithControl = activeElement && root.contains(activeElement) && [
+    'prototype-sensor-select',
+    'prototype-level-input',
+  ].includes(activeElement.id);
+  if (isInteractingWithControl && !forceRender) return;
+
   const sensor = withLatestReading(findSelectedSensor(sensors), latestReading);
   const pct = Math.min(100, Math.round((sensor.level / sensor.max) * 100));
   root.innerHTML = `
@@ -96,6 +106,7 @@ function renderPrototypeController(sensors, error = '', latestReading = null) {
 
 export function selectPrototypeSensor(sensorId) {
   uiState.selectedSensorId = Number(sensorId);
+  forcePrototypeRender = true;
   renderDashboard();
 }
 
@@ -142,6 +153,7 @@ async function sendPrototypeReading(levelValue, source) {
     setApiConnection('conectando');
     await api.sendSensorReading(sensor.id, parsedLevel, source);
     setApiConnection('conectada');
+    forcePrototypeRender = true;
     await refreshViews();
     toast(`${sensor.id}: leitura enviada para a API.`);
   } catch (error) {
