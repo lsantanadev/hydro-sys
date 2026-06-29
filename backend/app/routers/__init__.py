@@ -411,8 +411,10 @@ def _receive_reading(payload: ReadingCreate, db: Session) -> ReadingOut:
     db.add(reading)
     db.flush()
     if is_valid:
+
         audit_action = "LEITURA_SIMULADA" if origin == "SIMULACAO" else "LEITURA_SENSOR"
         log_audit(db, origin, audit_action, sensor.sensor_code, f"{level} cm - {new_status}")
+        main
         if old_status != sensor.current_status:
             log_audit(
                 db,
