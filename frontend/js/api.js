@@ -1,6 +1,7 @@
 import { CONFIG } from './config.js';
 
 const TOKEN_KEY = 'hydrosys_operator_token';
+const USER_KEY = 'hydrosys_auth_user';
 
 function apiBaseUrl() {
   const baseUrl = CONFIG.api.baseUrl?.trim() || '';
@@ -59,17 +60,36 @@ export const api = {
   setAuthToken(token) {
     localStorage.setItem(TOKEN_KEY, token);
   },
+  setAuthSession(token, user) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
   clearAuthToken() {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('hydrosys_operator_user');
   },
   hasAuthToken() {
     return Boolean(authToken());
   },
+  currentUser() {
+    try {
+      const current = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+      if (current.role) return current;
+      const legacyOperator = JSON.parse(localStorage.getItem('hydrosys_operator_user') || '{}');
+      return legacyOperator.email ? { ...legacyOperator, role: 'OPERATOR' } : {};
+    } catch {
+      return {};
+    }
+  },
+  hasOperatorSession() {
+    return Boolean(authToken() && this.currentUser().role === 'OPERATOR');
+  },
   health() {
     return request('/health');
   },
-  login(email, password) {
-    return request('/auth/login', jsonOptions({ email, password }, { method: 'POST' }));
+  login(email, password, role = 'OPERATOR') {
+    return request('/auth/login', jsonOptions({ email, password, role }, { method: 'POST' }));
   },
   me() {
     return request('/auth/me');
@@ -101,11 +121,20 @@ export const api = {
   residents() {
     return request('/residents');
   },
+  residentCount() {
+    return request('/residents/count');
+  },
   createResident(payload) {
     return request('/residents', jsonOptions(payload, { method: 'POST' }));
   },
   createManualOccurrence(payload) {
     return request('/manual-occurrences', jsonOptions(payload, { method: 'POST' }));
+  },
+  manualOccurrences() {
+    return request('/manual-occurrences');
+  },
+  closeManualOccurrence(id) {
+    return request(`/manual-occurrences/${encodeURIComponent(id)}/close`, jsonOptions({}, { method: 'POST' }));
   },
   sendSensorReading(sensorCode, value, source) {
     return request('/sensors/readings', jsonOptions({

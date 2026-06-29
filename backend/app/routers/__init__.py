@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import json
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -15,11 +14,14 @@ from app.schemas import (
     LoginRequest,
     LoginResponse,
     LatestReadingOut,
+    MapSensorOut,
+    MapShelterOut,
     ManualOccurrenceClose,
     ManualOccurrenceCreate,
     ManualOccurrenceOut,
     ReadingCreate,
     ReadingOut,
+    ResidentCountOut,
     ResidentCreate,
     ResidentOut,
     SensorCreate,
@@ -27,8 +29,8 @@ from app.schemas import (
     SensorUpdate,
     ShelterOut,
 )
-from app.security import create_access_token, decode_access_token, verify_password
-from app.services import audit
+from app.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.services import log_audit
 
 
 router = APIRouter(prefix="/api")
@@ -110,6 +112,7 @@ def serialize_manual_occurrence(
         status=occurrence.status,
         reason=occurrence.reason,
         operator=occurrence.operator,
+        active=occurrence.closed_at is None,
         closed_at=occurrence.closed_at,
         closed_by=occurrence.closed_by,
         created_at=occurrence.created_at,
@@ -183,16 +186,21 @@ def latest_sensor_reading(db: Session, sensor_id: int) -> SensorReading | None:
     )
 
 
-def audit_payload(payload: dict) -> str:
-    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
-
-
 def operator_out(user: AppUser) -> AuthUserOut:
     return AuthUserOut(
         id=user.id,
         name=user.name,
         email=user.email,
         role=user.role,
+    )
+
+
+def resident_out(resident: Resident) -> AuthUserOut:
+    return AuthUserOut(
+        id=resident.id,
+        name=resident.name,
+        email=resident.email,
+        role="MORADOR",
     )
 
 
@@ -232,6 +240,17 @@ def health(db: Session = Depends(get_db)):
 
 @router.post("/auth/login", response_model=LoginResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    if payload.role == "MORADOR":
+        resident = db.scalar(select(Resident).where(func.lower(Resident.email) == payload.email))
+        if not resident or not resident.password_hash or not verify_password(payload.password, resident.password_hash):
+            raise unauthorized_login()
+        log_audit(db, resident.email, "LOGIN_MORADOR", "auth")
+        db.commit()
+        return LoginResponse(
+            access_token=create_access_token(str(resident.id), "MORADOR"),
+            user=resident_out(resident),
+        )
+
     user = db.scalar(
         select(AppUser).where(
             func.lower(AppUser.email) == payload.email,
@@ -242,7 +261,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(payload.password, user.password_hash):
         raise unauthorized_login()
     user.last_login_at = datetime.now(timezone.utc)
-    audit(db, user.email, "LOGIN_OPERADOR", "auth")
+    log_audit(db, user.email, "LOGIN_OPERADOR", "auth")
     db.commit()
     return LoginResponse(
         access_token=create_access_token(str(user.id), user.role),
@@ -280,7 +299,7 @@ def create_sensor(payload: SensorCreate, db: Session = Depends(get_db), operator
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe sensor com este código.") from None
-    audit(db, operator.email, "SENSOR_CRIADO", sensor.sensor_code, sensor.name)
+    log_audit(db, operator.email, "SENSOR_CADASTRADO", sensor.sensor_code, sensor.name)
     db.commit()
     db.refresh(sensor)
     return serialize_sensor(sensor)
@@ -332,20 +351,18 @@ def update_sensor(
     for field, value in data.items():
         setattr(sensor, field, value)
     sensor.current_status = status_by_level(sensor, float(sensor.current_level))
-    audit(db, operator.email, "SENSOR_ATUALIZADO", sensor.sensor_code, audit_payload(data))
+    log_audit(db, operator.email, "SENSOR_EDITADO", sensor.sensor_code, data)
     if threshold_changes:
-        audit(
+        log_audit(
             db,
             operator.email,
             "LIMIARES_ALTERADOS",
             sensor.sensor_code,
-            audit_payload(
-                {
-                    "alterados": threshold_changes,
-                    "antes": previous_thresholds,
-                    "depois": new_thresholds,
-                }
-            ),
+            {
+                "alterados": threshold_changes,
+                "antes": previous_thresholds,
+                "depois": new_thresholds,
+            },
         )
     db.commit()
     db.refresh(sensor)
@@ -358,7 +375,7 @@ def deactivate_sensor(sensor_id: int, db: Session = Depends(get_db), operator: A
     if not sensor.active:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     sensor.active = False
-    audit(db, operator.email, "SENSOR_DESATIVADO", sensor.sensor_code)
+    log_audit(db, operator.email, "SENSOR_DESATIVADO", sensor.sensor_code)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -394,31 +411,31 @@ def _receive_reading(payload: ReadingCreate, db: Session) -> ReadingOut:
     db.add(reading)
     db.flush()
     if is_valid:
-        audit_action = "LEITURA_SIMULADA" if origin == "SIMULACAO" else "LEITURA_SENSOR_RECEBIDA"
-        audit(db, origin, audit_action, sensor.sensor_code, f"{level} cm - {new_status}")
+
+        audit_action = "LEITURA_SIMULADA" if origin == "SIMULACAO" else "LEITURA_SENSOR"
+        log_audit(db, origin, audit_action, sensor.sensor_code, f"{level} cm - {new_status}")
+        main
         if old_status != sensor.current_status:
-            audit(
+            log_audit(
                 db,
                 "sistema",
-                "STATUS_SENSOR_ALTERADO",
+                "STATUS_ALTERADO",
                 sensor.sensor_code,
                 f"{old_status} para {sensor.current_status}",
             )
     else:
-        audit(
+        log_audit(
             db,
             origin,
             "LEITURA_DESCARTADA",
             sensor.sensor_code,
-            audit_payload(
-                {
-                    "water_level_cm": level,
-                    "media_ultimas_3_validas": filter_result["average"],
-                    "variacao_percentual": filter_result["variation_percent"],
-                    "limite_percentual": 50,
-                    "leituras_validas_consideradas": filter_result["previous_count"],
-                }
-            ),
+            {
+                "water_level_cm": level,
+                "media_ultimas_3_validas": filter_result["average"],
+                "variacao_percentual": filter_result["variation_percent"],
+                "limite_percentual": 50,
+                "leituras_validas_consideradas": filter_result["previous_count"],
+            },
         )
     db.commit()
     db.refresh(reading)
@@ -437,16 +454,49 @@ def latest_reading(sensor_id: int, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/map/sensors", response_model=list[SensorOut])
+@router.get("/map/sensors", response_model=list[MapSensorOut])
 def map_sensors(db: Session = Depends(get_db)):
     sensors = db.scalars(select(Sensor).where(Sensor.active.is_(True)).order_by(Sensor.id)).all()
-    return [serialize_sensor(sensor, latest_sensor_reading(db, sensor.id)) for sensor in sensors]
+    return sensors
 
 
-@router.get("/map/shelters", response_model=list[ShelterOut])
+@router.get("/map/shelters", response_model=list[MapShelterOut])
 def map_shelters(db: Session = Depends(get_db)):
     shelters = db.scalars(select(Shelter).where(Shelter.active.is_(True)).order_by(Shelter.id)).all()
-    return shelters
+    return [
+        MapShelterOut(
+            id=shelter.id,
+            name=shelter.name,
+            address=shelter.address,
+            latitude=shelter.latitude,
+            longitude=shelter.longitude,
+            capacity=shelter.capacity,
+            occupancy=shelter.occupancy,
+            available_spots=max(0, shelter.capacity - shelter.occupancy),
+        )
+        for shelter in shelters
+    ]
+
+
+@router.get("/manual-occurrences", response_model=list[ManualOccurrenceOut])
+def list_manual_occurrences(db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
+    occurrences = db.scalars(
+        select(ManualOccurrence)
+        .order_by(ManualOccurrence.closed_at.is_not(None), ManualOccurrence.created_at.desc())
+    ).all()
+    if not occurrences:
+        return []
+    sensors = {
+        sensor.id: sensor
+        for sensor in db.scalars(
+            select(Sensor).where(Sensor.id.in_([occurrence.sensor_id for occurrence in occurrences]))
+        ).all()
+    }
+    return [
+        serialize_manual_occurrence(occurrence, sensors[occurrence.sensor_id])
+        for occurrence in occurrences
+        if occurrence.sensor_id in sensors
+    ]
 
 
 @router.post(
@@ -480,19 +530,23 @@ def create_manual_occurrence(
     sensor.current_status = "vermelho"
     db.add(occurrence)
     db.flush()
-    audit(db, actor, "OCORRENCIA_MANUAL_CRIADA", sensor.sensor_code, occurrence.reason)
+    log_audit(db, actor, "OCORRENCIA_CRIADA", sensor.sensor_code, occurrence.reason)
     db.commit()
     db.refresh(occurrence)
     return serialize_manual_occurrence(occurrence, sensor)
 
 
+@router.post(
+    "/manual-occurrences/{occurrence_id}/close",
+    response_model=ManualOccurrenceOut,
+)
 @router.put(
     "/manual-occurrences/{occurrence_id}/close",
     response_model=ManualOccurrenceOut,
 )
 def close_manual_occurrence(
     occurrence_id: int,
-    payload: ManualOccurrenceClose,
+    payload: ManualOccurrenceClose | None = None,
     db: Session = Depends(get_db),
     operator: AppUser = Depends(require_operator),
 ):
@@ -522,10 +576,10 @@ def close_manual_occurrence(
         sensor.current_level = 0
         sensor.current_status = "verde"
 
-    audit(
+    log_audit(
         db,
         actor,
-        "OCORRENCIA_MANUAL_ENCERRADA",
+        "OCORRENCIA_ENCERRADA",
         sensor.sensor_code,
         f"Status restaurado para {sensor.current_status}",
     )
@@ -536,29 +590,34 @@ def close_manual_occurrence(
 
 @router.post("/residents", response_model=ResidentOut, status_code=status.HTTP_201_CREATED)
 def create_resident(payload: ResidentCreate, db: Session = Depends(get_db)):
-    consent = payload.consent if payload.consent is not None else payload.consentimento
-    if consent is not True:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Consentimento LGPD obrigatério.")
-    name = (payload.name or payload.nome or "").strip()
-    whatsapp = (payload.whatsapp or payload.telefone or "").strip()
-    neighborhood = (payload.neighborhood or payload.bairro or "").strip()
-    street = (payload.street or payload.rua or "").strip()
-    if not all([name, whatsapp, payload.email, neighborhood, street]):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Preencha nome, WhatsApp, e-mail, bairro e rua.")
+    if payload.consent is not True:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Consentimento LGPD obrigatorio.")
+    if db.scalar(select(Resident.id).where(func.lower(Resident.email) == payload.email)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ja existe cadastro com este e-mail.")
     resident = Resident(
-        name=name,
-        whatsapp=whatsapp,
-        email=payload.email.strip().lower(),
-        neighborhood=neighborhood,
-        street=street,
+        name=payload.name,
+        whatsapp=payload.whatsapp,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        neighborhood=payload.neighborhood,
+        street=payload.street,
         consent_at=datetime.now(timezone.utc),
     )
     db.add(resident)
-    db.flush()
-    audit(db, "morador", "MORADOR_CADASTRADO", str(resident.id), resident.email)
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ja existe cadastro com este e-mail.") from None
+    log_audit(db, "morador", "MORADOR_CADASTRADO", str(resident.id), resident.email)
     db.commit()
     db.refresh(resident)
     return resident
+
+
+@router.get("/residents/count", response_model=ResidentCountOut)
+def count_residents(db: Session = Depends(get_db)):
+    return ResidentCountOut(count=db.scalar(select(func.count(Resident.id))) or 0)
 
 
 @router.get("/residents", response_model=list[ResidentOut])
@@ -568,7 +627,11 @@ def list_residents(db: Session = Depends(get_db), operator: AppUser = Depends(re
 
 @router.get("/audit", response_model=list[AuditOut])
 def list_audit(db: Session = Depends(get_db), operator: AppUser = Depends(require_operator)):
-    events = db.scalars(select(AuditEvent).order_by(AuditEvent.id.desc()).limit(250)).all()
+    events = db.scalars(
+        select(AuditEvent)
+        .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+        .limit(250)
+    ).all()
     return [
         AuditOut(
             id=event.id,

@@ -21,7 +21,7 @@ import {
   selectPrototypeSensor,
   startSensorPolling,
 } from './dashboard.js';
-import { renderAlerts, openManualModal, openPublicAlertModal, saveManualOccurrence } from './alertas.js';
+import { renderAlerts, openManualModal, openPublicAlertModal, saveManualOccurrence, closeManualOccurrence } from './alertas.js';
 import { renderSensors, openSensorModal, openEditSensorModal, saveSensorCreate, saveSensorEdit, deleteSensor } from './sensores.js';
 import { renderShelters } from './abrigos.js';
 import { openDonationManager } from './doacoes.js';
@@ -79,6 +79,7 @@ Object.assign(window, {
   openManualModal,
   openPublicAlertModal,
   saveManualOccurrence,
+  closeManualOccurrence,
   openSensorModal,
   openEditSensorModal,
   saveSensorCreate,

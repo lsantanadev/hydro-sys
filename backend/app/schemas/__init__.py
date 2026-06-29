@@ -106,18 +106,58 @@ class LatestReadingOut(BaseModel):
     latest_reading_discarded: bool
 
 
+class MapSensorOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    neighborhood: str | None
+    latitude: float
+    longitude: float
+    current_level: float
+    current_status: str
+    last_reading_at: datetime | None
+
+
+class MapShelterOut(BaseModel):
+    id: int
+    name: str
+    address: str | None = None
+    latitude: float
+    longitude: float
+    capacity: int
+    occupancy: int
+    available_spots: int
+
+
 class ResidentCreate(BaseModel):
-    name: str | None = None
-    nome: str | None = None
-    whatsapp: str | None = None
-    telefone: str | None = None
-    email: str
-    neighborhood: str | None = None
-    bairro: str | None = None
-    street: str | None = None
-    rua: str | None = None
-    consent: bool | None = None
-    consentimento: bool | None = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=120)
+    whatsapp: str = Field(min_length=8, max_length=30)
+    email: str = Field(min_length=3, max_length=160)
+    password: str = Field(min_length=8, max_length=255)
+    neighborhood: str = Field(min_length=1, max_length=120)
+    street: str = Field(min_length=1, max_length=200)
+    consent: bool
+
+    @field_validator("whatsapp")
+    @classmethod
+    def validate_whatsapp(cls, value: str):
+        digits = re.sub(r"\D", "", value)
+        if digits.startswith("55") and len(digits) in (12, 13):
+            digits = digits[2:]
+        if not re.fullmatch(r"[1-9][0-9](?:9[0-9]{8}|[2-9][0-9]{7})", digits):
+            raise ValueError("Informe um WhatsApp brasileiro com DDD. Exemplo: (48) 99999-9999.")
+        return value
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str):
+        value = value.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
+            raise ValueError("Informe um e-mail valido.")
+        return value
 
 
 class ResidentOut(BaseModel):
@@ -133,11 +173,16 @@ class ResidentOut(BaseModel):
     created_at: datetime
 
 
+class ResidentCountOut(BaseModel):
+    count: int
+
+
 class LoginRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     email: str = Field(min_length=3, max_length=160)
     password: str = Field(min_length=1, max_length=255)
+    role: str = Field(default="OPERATOR", min_length=1, max_length=30)
 
     @field_validator("email")
     @classmethod
@@ -146,6 +191,16 @@ class LoginRequest(BaseModel):
         if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
             raise ValueError("Informe um e-mail valido.")
         return value
+
+    @field_validator("role")
+    @classmethod
+    def normalize_role(cls, value: str):
+        role = value.strip().upper()
+        if role == "OPERADOR":
+            return "OPERATOR"
+        if role not in {"OPERATOR", "MORADOR"}:
+            raise ValueError("Perfil de login invalido.")
+        return role
 
 
 class AuthUserOut(BaseModel):
@@ -162,9 +217,12 @@ class LoginResponse(BaseModel):
 
 
 class ManualOccurrenceCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     sensor_id: int | None = None
     sensor_code: str | None = None
     reason: str = Field(min_length=1)
+    operator: str | None = Field(default=None, min_length=1, max_length=120)
     actor: str = Field(default="operador", min_length=1, max_length=120)
 
 
@@ -181,6 +239,7 @@ class ManualOccurrenceOut(BaseModel):
     status: str
     reason: str
     operator: str
+    active: bool
     closed_at: datetime | None
     closed_by: str | None
     created_at: datetime
@@ -200,6 +259,7 @@ class ShelterOut(BaseModel):
 
     id: int
     name: str
+    address: str | None
     latitude: float
     longitude: float
     capacity: int

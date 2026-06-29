@@ -9,14 +9,14 @@ export const uiState = {
 };
 
 export async function loadOperationalData() {
-  const [sensors, shelters, audit, residents] = await Promise.allSettled([
+  const [sensors, shelters, audit, residentCount] = await Promise.allSettled([
     loadSensors(),
     loadShelters(),
     loadAudit(),
-    loadResidents(),
+    loadResidentCount(),
   ]);
 
-  if ([sensors, shelters, audit, residents].every(result => result.status === 'rejected')) {
+  if ([sensors, shelters, audit, residentCount].every(result => result.status === 'rejected')) {
     throw sensors.reason || new Error('API indisponível.');
   }
 
@@ -24,13 +24,18 @@ export async function loadOperationalData() {
     sensors: settledValue(sensors),
     shelters: settledValue(shelters),
     audit: settledValue(audit),
-    residents: settledValue(residents),
+    residentCount: settledValue(residentCount, 0),
   };
 }
 
 export async function loadSensors() {
   const sensors = await api.sensors();
   return sensors.map(normalizeSensor);
+}
+
+export async function loadMapSensors() {
+  const sensors = await api.mapSensors();
+  return sensors.map(normalizeMapSensor);
 }
 
 export async function loadShelters() {
@@ -46,6 +51,11 @@ export async function loadAudit() {
 export async function loadResidents() {
   const residents = await api.residents();
   return residents.map(normalizeResident);
+}
+
+export async function loadResidentCount() {
+  const payload = await api.residentCount();
+  return Number(payload.count || 0);
 }
 
 export function getActiveAlerts(sensors = []) {
@@ -96,23 +106,65 @@ function normalizeSensor(sensor) {
   };
 }
 
+function normalizeMapSensor(sensor) {
+  const level = Number(sensor.current_level || 0);
+  const status = normalizeSensorStatus(sensor.current_status);
+  const neighborhood = sensor.neighborhood || '';
+  return {
+    apiId: sensor.id,
+    id: String(sensor.id),
+    nome: sensor.name,
+    bairro: neighborhood,
+    bairroKey: normalizeTextKey(neighborhood),
+    endereco: neighborhood ? `Bairro ${neighborhood}` : 'Localizacao cadastrada',
+    lat: Number(sensor.latitude),
+    lng: Number(sensor.longitude),
+    level,
+    max: Math.max(20, Math.ceil(level * 1.25)),
+    st: status,
+    status: 'online',
+    reading: formatDate(sensor.last_reading_at),
+  };
+}
+
+function normalizeSensorStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  return ['verde', 'amarelo', 'laranja', 'vermelho'].includes(normalized) ? normalized : 'verde';
+}
+
+export function normalizeTextKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
 function normalizeShelter(shelter) {
+  const capacity = Number(shelter.capacity || 0);
+  const occupancy = Number(shelter.occupancy || 0);
+  const latitude = Number(shelter.latitude);
+  const longitude = Number(shelter.longitude);
+  const availableSpots = Number.isFinite(Number(shelter.available_spots))
+    ? Number(shelter.available_spots)
+    : Math.max(0, capacity - occupancy);
   return {
     id: shelter.id,
     nome: shelter.name,
-    endereco: shelter.address || 'Endereço não informado',
-    lat: Number(shelter.latitude),
-    lng: Number(shelter.longitude),
-    cap: Number(shelter.capacity || 0),
-    occ: Number(shelter.occupancy || 0),
-    st: shelter.active ? 'aberto' : 'fechado',
-    donations: shelter.donations || [],
+    endereco: shelter.address || 'Endereco nao informado',
+    lat: latitude,
+    lng: longitude,
+    cap: capacity,
+    occ: occupancy,
+    vagas: availableSpots,
+    st: capacity > 0 && availableSpots <= 0 ? 'lotado' : 'aberto',
+    donations: [],
   };
 }
 
 function normalizeAudit(event) {
   return {
-    hora: formatDate(event.created_at || event.data_hora),
+    hora: formatAuditDate(event.created_at || event.data_hora),
     usuario: event.actor || event.usuario || 'sistema',
     acao: event.action || event.acao || '-',
     entidade: event.entity || event.entidade || '-',
@@ -132,8 +184,8 @@ function normalizeResident(resident) {
   };
 }
 
-function settledValue(result) {
-  return result.status === 'fulfilled' ? result.value : [];
+function settledValue(result, fallback = []) {
+  return result.status === 'fulfilled' ? result.value : fallback;
 }
 
 function formatDetails(details) {
@@ -145,4 +197,17 @@ function formatDetails(details) {
 function formatDate(value) {
   if (!value) return 'Sem leitura';
   return new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatAuditDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }

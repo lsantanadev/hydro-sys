@@ -101,7 +101,7 @@
       <div class="auth-logo"><img class="auth-wordmark" src="assets/hydrosys-logo.png" alt="HydroSys" /></div>
       <h2>Acesso</h2>
       <p>Use o perfil de operador para entrar no painel técnico.</p>
-      <label class="field"><span>Entrar como</span><select id="lperfil"><option value="OPERADOR">Operador</option><option value="MORADOR">Morador</option></select></label>
+      <label class="field"><span>Entrar como</span><select id="lperfil"><option value="OPERATOR">Operador</option><option value="MORADOR">Morador</option></select></label>
       <label class="field"><span>E-mail</span><input id="le" type="email" /></label>
       <label class="field"><span>Senha</span><input id="lp" type="password" onkeydown="if(event.key==='Enter')doLogin()" /></label>
       <button class="btn btn-primary full" type="button" onclick="doLogin()"><span data-icon="login"></span>Entrar</button>
@@ -116,7 +116,7 @@
         <label class="field span-2"><span>Nome completo</span><input id="fn" placeholder="Maria da Silva" /></label>
         <label class="field"><span>WhatsApp</span><input id="fw" placeholder="(48) 99999-9999" /></label>
         <label class="field"><span>E-mail</span><input id="fem" type="email" placeholder="maria@email.com" /></label>
-        <label class="field"><span>Senha</span><input id="fsenha" type="password" placeholder="Mínimo 6 caracteres" /></label>
+        <label class="field"><span>Senha</span><input id="fsenha" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" /></label>
         <div class="address-section-head span-2">
           <h3>Endereço principal</h3>
           <button class="btn btn-secondary" type="button" onclick="addCadastroEndereco()"><span data-icon="map-pin"></span>Adicionar outro endereço</button>
@@ -129,14 +129,14 @@
         <div class="extra-addresses span-2" id="cad-extra-addresses"></div>
         <label class="consent span-2"><input id="fcons" type="checkbox" /> <span>Concordo com uso dos dados para alertas conforme LGPD.</span></label>
       </div>
-      <button class="btn btn-primary full" type="button" onclick="subForm()"><span data-icon="check"></span>Cadastrar</button>
+      <button class="btn btn-primary full" id="resident-submit" type="button" onclick="subForm()"><span data-icon="check"></span>Cadastrar</button>
       <button class="btn btn-ghost full" type="button" onclick="goTo('landing')">Voltar para o início</button>
     </div>
     <div class="form-card success-card" id="cad-succ-box" hidden>
       <span data-icon="check-circle"></span>
-      <h2>Cadastro demonstrativo concluído</h2>
-      <p>A conta visual de morador foi criada para navegação nesta versão técnica.</p>
-      <button class="btn btn-primary" type="button" onclick="goTo('map')">Mostrar conta no mapa</button>
+      <h2>Cadastro enviado</h2>
+      <p>Cadastro confirmado pela API.</p>
+      <button class="btn btn-primary" type="button" onclick="goTo('login')">Entrar com cadastro</button>
     </div>
   </section>
 
@@ -155,7 +155,7 @@
           <option value="laranja">Laranja</option>
           <option value="vermelho">Vermelho</option>
         </select>
-        <button class="btn btn-ghost" id="btncrit" type="button" onclick="toggleCrit()">Críticos</button>
+        <button class="btn btn-ghost" id="btncrit" type="button" aria-pressed="false" onclick="toggleCrit()">Críticos</button>
         <button class="btn btn-danger" type="button" onclick="openEmergencyCenter()"><span data-icon="emergency"></span>Emergência</button>
         <div class="map-session-controls" id="map-session-controls" hidden>
           <div class="operator-chip" aria-label="Usuário conectado"><span id="map-user-initials">OP</span><strong id="map-user-name">Operador</strong></div>
@@ -263,7 +263,7 @@
 
         <section id="tab-auditoria" class="tab">
           <div class="panel-head"><h3>Auditoria</h3><button class="btn btn-ghost" onclick="exportAuditReport()">Gerar relatório CSV</button></div>
-          <div class="table-wrap"><table><thead><tr><th>Hora</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody id="hist-tbody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Data e hora</th><th>Ator</th><th>Ação</th><th>Entidade</th><th>Detalhes</th></tr></thead><tbody id="hist-tbody"></tbody></table></div>
         </section>
       </div>
     </main>
