@@ -391,7 +391,17 @@ def _receive_reading(payload: ReadingCreate, db: Session) -> ReadingOut:
     if not sensor.active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sensor inativo.")
     old_status = sensor.current_status
-    filter_result = reading_filter_result(db, sensor.id, level)
+    is_simulation = origin == "SIMULACAO"
+    filter_result = (
+        {
+            "is_valid": True,
+            "previous_count": 0,
+            "average": None,
+            "variation_percent": None,
+        }
+        if is_simulation
+        else reading_filter_result(db, sensor.id, level)
+    )
     is_valid = filter_result["is_valid"]
     new_status = status_by_level(sensor, level)
     now = datetime.now(timezone.utc)
