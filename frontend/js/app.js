@@ -26,7 +26,7 @@ import { renderSensors, openSensorModal, openEditSensorModal, saveSensorCreate, 
 import { renderShelters } from './abrigos.js';
 import { openDonationManager } from './doacoes.js';
 import { openEmergencyCenter, renderEmergencyRequests } from './emergencia.js';
-import { renderAudit, exportAuditReport } from './auditoria.js';
+import { renderAudit, exportAuditReport, goToAuditPage } from './auditoria.js';
 import { closeModal } from './ui.js';
 
 async function renderAll() {
@@ -89,6 +89,7 @@ Object.assign(window, {
   openEmergencyCenter,
   closeModal,
   exportAuditReport,
+  goToAuditPage,
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
