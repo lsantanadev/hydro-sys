@@ -221,7 +221,6 @@ export function applyFilters() {
 export function toggleCrit() {
   uiState.critOnly = !uiState.critOnly;
   const button = document.getElementById('btncrit');
-  button?.classList.toggle('btn-secondary', uiState.critOnly);
   button?.setAttribute('aria-pressed', String(uiState.critOnly));
   renderMapLayers(cachedSensors, cachedShelters, cachedError);
 }

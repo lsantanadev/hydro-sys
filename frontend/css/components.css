@@ -34,6 +34,17 @@
   border-color: var(--border);
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--border-strong); background: rgba(255, 255, 255, .07); }
+.critical-filter-toggle[aria-pressed="true"] {
+  color: #fff7ed;
+  background: rgba(251, 113, 133, .22);
+  border-color: rgba(251, 113, 133, .56);
+  box-shadow: 0 0 0 3px rgba(251, 113, 133, .16);
+}
+.critical-filter-toggle[aria-pressed="true"]:hover {
+  color: #fff;
+  background: rgba(251, 113, 133, .30);
+  border-color: rgba(251, 113, 133, .72);
+}
 .field {
   display: flex;
   flex-direction: column;
