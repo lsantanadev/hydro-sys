@@ -7,6 +7,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.geocoding import geocode_address
 from app.models import AppUser, AuditEvent, ManualOccurrence, Resident, Sensor, SensorReading, Shelter
 from app.schemas import (
     AuditOut,
@@ -211,6 +212,23 @@ def unauthorized_login() -> HTTPException:
     )
 
 
+def resolve_coordinates(
+    *,
+    address: str | None,
+    neighborhood: str | None,
+    latitude: float | None,
+    longitude: float | None,
+) -> tuple[float, float]:
+    if address:
+        return geocode_address(address, neighborhood)
+    if latitude is None or longitude is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Informe endereco ou latitude e longitude.",
+        )
+    return float(latitude), float(longitude)
+
+
 def require_operator(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
@@ -279,13 +297,20 @@ def create_sensor(payload: SensorCreate, db: Session = Depends(get_db), operator
     code = payload.sensor_code.strip().upper()
     if db.scalar(select(Sensor).where(Sensor.sensor_code == code)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe sensor com este código.")
+    latitude, longitude = resolve_coordinates(
+        address=payload.address,
+        neighborhood=payload.neighborhood,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+    )
+    location_description = payload.address or payload.location_description
     sensor = Sensor(
         sensor_code=code,
         name=payload.name.strip(),
         neighborhood=payload.neighborhood,
-        location_description=payload.location_description,
-        latitude=payload.latitude,
-        longitude=payload.longitude,
+        location_description=location_description,
+        latitude=latitude,
+        longitude=longitude,
         threshold_yellow=payload.threshold_yellow,
         threshold_orange=payload.threshold_orange,
         threshold_red=payload.threshold_red,
@@ -322,6 +347,22 @@ def update_sensor(
     data = payload.model_dump(exclude_unset=True)
     if not data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Informe ao menos um campo para atualizar.")
+    address = data.pop("address", None)
+    if address:
+        latitude, longitude = resolve_coordinates(
+            address=address,
+            neighborhood=data.get("neighborhood", sensor.neighborhood),
+            latitude=None,
+            longitude=None,
+        )
+        data["latitude"] = latitude
+        data["longitude"] = longitude
+        data["location_description"] = address
+    elif ("latitude" in data) != ("longitude" in data):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Informe latitude e longitude juntas.",
+        )
     threshold_fields = ("threshold_yellow", "threshold_orange", "threshold_red")
     previous_thresholds = {
         "threshold_yellow": float(sensor.threshold_yellow),

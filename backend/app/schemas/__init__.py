@@ -11,8 +11,9 @@ class SensorBase(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     neighborhood: str | None = Field(default=None, max_length=120)
     location_description: str | None = Field(default=None, max_length=255)
-    latitude: float = Field(ge=-90, le=90)
-    longitude: float = Field(ge=-180, le=180)
+    address: str | None = Field(default=None, min_length=5, max_length=255)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     threshold_yellow: float = Field(gt=0)
     threshold_orange: float = Field(gt=0)
     threshold_red: float = Field(gt=0)
@@ -24,7 +25,7 @@ class SensorBase(BaseModel):
             raise ValueError("sensor_code deve conter apenas letras, numeros, hifen ou underscore.")
         return value
 
-    @field_validator("neighborhood", "location_description")
+    @field_validator("neighborhood", "location_description", "address")
     @classmethod
     def empty_optional_text_to_none(cls, value: str | None):
         return value or None
@@ -33,6 +34,8 @@ class SensorBase(BaseModel):
     def validate_thresholds(self):
         if not (self.threshold_yellow < self.threshold_orange < self.threshold_red):
             raise ValueError("Os limiares precisam seguir amarelo < laranja < vermelho.")
+        if not self.address and (self.latitude is None or self.longitude is None):
+            raise ValueError("Informe endereco ou coordenadas do sensor.")
         return self
 
 
@@ -46,6 +49,7 @@ class SensorUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     neighborhood: str | None = Field(default=None, max_length=120)
     location_description: str | None = Field(default=None, max_length=255)
+    address: str | None = Field(default=None, min_length=5, max_length=255)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     threshold_yellow: float | None = Field(default=None, gt=0)
@@ -53,7 +57,7 @@ class SensorUpdate(BaseModel):
     threshold_red: float | None = Field(default=None, gt=0)
     active: bool | None = None
 
-    @field_validator("neighborhood", "location_description")
+    @field_validator("neighborhood", "location_description", "address")
     @classmethod
     def empty_optional_text_to_none(cls, value: str | None):
         return value or None
